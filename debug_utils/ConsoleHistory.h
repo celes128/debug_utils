@@ -62,55 +62,60 @@ namespace dbgutils {
 
 		// Iteration
 
-		// RETURN VALUE
-		//	Returns true iff the iteration pointer points to a new entry (this includes
-		//	the case of starting the iteration).
-		bool go_to_previous()
+		enum ITEREVENT {
+			ITEREVENT_AT_NEW_ENTRY,	 
+			ITEREVENT_ALREADY_AT_OLDEST,			
+			ITEREVENT_NOT_ITERATING,				// the iteration pointer was undefined be the function call
+			ITEREVENT_CANNOT_ITERATE				// because the history is empty
+		};
+
+		ITEREVENT go_to_previous()
 		{
 			if (empty()) {
-				return false;
+				return ITEREVENT_CANNOT_ITERATE;
 			}
 
 			if (!iterating()) {
 				init_iteration();
-				return true;
+				return ITEREVENT_AT_NEW_ENTRY;
 			}
 
-			if (at_the_least_recent_entry()) {
-				return false;
+			if (at_the_oldest_entry()) {
+				return ITEREVENT_ALREADY_AT_OLDEST;
 			}
 
 			decrement_ptr(&m_cur);
-			return true;
+			return ITEREVENT_AT_NEW_ENTRY;
 		}
 
-		// RETURN VALUE
-		//	Returns true iff the iteration pointer points to a new entry or the iteration ended.
-		bool go_to_next()
+		ITEREVENT go_to_next()
 		{
 			if (empty()) {
-				return false;
+				return ITEREVENT_CANNOT_ITERATE;
 			}
 
 			if (!iterating()) {
-				return false;
+				return ITEREVENT_NOT_ITERATING;
 			}
 
 			if (at_the_most_recent_entry()) {
 				cancel_iteration();
-				return true;
+				return ITEREVENT_NOT_ITERATING;
 			}
 
 			increment_ptr(&m_cur);
-			return true;
+			return ITEREVENT_AT_NEW_ENTRY;
 		}
 
-	private:
+		// cancel_iteration stops the iteration state.
+		// Calling got_to_prev() will restart the iteration by pointing at the most
+		// recent entry, if there is at least one.
 		void cancel_iteration()
 		{
 			m_curIsDefined = false;
 		}
 		
+	private:
 		void init_iteration()
 		{
 			m_curIsDefined = true;
@@ -123,7 +128,7 @@ namespace dbgutils {
 			return m_curIsDefined;
 		}
 
-		bool at_the_least_recent_entry() const
+		bool at_the_oldest_entry() const
 		{
 			return m_cur == m_bottom;
 		}

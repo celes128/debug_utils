@@ -77,9 +77,9 @@ std::vector<KeyEvent> generate_input_events()
 	}};
 }
 
-std::vector<std::string> history_entries_from_latest_to_most_recent(History &history)
+std::vector<std::string> history_entries_from_oldest_to_most_recent(History &history)
 {
-	// Get the entries from the most recent one to the latest one.
+	// Get the entries from the most recent one to the oldest one.
 	std::vector<std::string> entries;
 	for (size_t i = 0; i < history.size(); i++) {
 		history.go_to_previous();
@@ -87,12 +87,9 @@ std::vector<std::string> history_entries_from_latest_to_most_recent(History &his
 		entries.push_back(history.get());
 	}
 
-	// Reset the history iteration
-	while (history.go_to_next()) {
-		nullptr;
-	}
+	history.cancel_iteration();
 
-	// Now from the latest one to the most recent one.
+	// Now from the oldest one to the most recent one.
 	std::reverse(entries.begin(), entries.end());
 
 	return entries;
@@ -100,7 +97,7 @@ std::vector<std::string> history_entries_from_latest_to_most_recent(History &his
 
 void print_history(History &history)
 {
-	auto entries = history_entries_from_latest_to_most_recent(history);
+	auto entries = history_entries_from_oldest_to_most_recent(history);
 
 	std::cout << "------------------------------" << std::endl;
 	std::cout << "----        HISTORY         --" << std::endl;
@@ -120,19 +117,12 @@ void display_prompt(const std::string &s)
 void handle_key_press_event(IN const std::string &key, IN History &history, IN OUT std::string *line)
 {
 	if (key == "up") {
-		auto changed = history.go_to_previous();
-		if (changed) {
-			*line = history.get();
-		}
+		auto ev = history.go_to_previous();
+		*line = history.get();
 	}
 	else if (key == "down") {
-		auto changed = history.go_to_next();
-		if (changed) {
-			auto entry = history.get();
-			if (entry != "") {
-				*line = entry;
-			}
-		}
+		auto ev = history.go_to_next();
+		*line = history.get();
 	}
 }
 
@@ -164,7 +154,33 @@ void run(History &history, const EventList &events)
 			continue;
 		}
 
-		handle_key_press_event(IN ev.key, IN history, IN OUT &lineToPrint);
+		// Handle the key press
+		bool getLineFromHistory = false;
+
+		if (ev.key == "up") {
+			// This function can never ends the iteration if the history has at least one entry.
+			auto ev = history.go_to_previous();
+
+			getLineFromHistory = true;
+		}
+		else if (ev.key == "down") {
+			// This function can end the iteration.
+			// In this case a call to get() will return an empty string.
+			auto ev = history.go_to_next();
+
+			getLineFromHistory = true;
+		}
+		
+		// If the up or down key was pressed then we get the line from history.
+		// But it can be an empty string if iteration is over.
+		// In that case we will print the command line.
+		if (getLineFromHistory) {
+			lineToPrint = history.get();
+
+			if (lineToPrint.length() == 0) {
+				lineToPrint = cmdLine;
+			}
+		}
 
 		display_prompt(lineToPrint + " " + to_str(ev));
 	}

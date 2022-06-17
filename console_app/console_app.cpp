@@ -146,11 +146,6 @@ std::string to_str(const KeyEvent &ev)
 		;
 }
 
-void run()
-{
-
-}
-
 void run(History &history, const EventList &events)
 {
 	print_history(history);

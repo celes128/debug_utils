@@ -1,17 +1,58 @@
+/*
+	This program shows how to use the dbgutils::ConsoleHistory class.
+	
+	This program simulates the behaviour of a Linux or Window console when you press
+	the up or down key.
+*/
+
 #include <iostream>
 #include <vector>
 #include <string>
 #include <algorithm>//std::reverse
 #include "../debug_utils/ConsoleHistory.h"
 
-// Forward declaration of structs and functions
-// along with renaming those ugly, long type names.
+
+//			FORWARD DECLARATIONS
+//
+#define IN
+#define OUT
+
 struct KeyEvent;
-using History = dbgutils::ConsoleHistory;
+
+using History	= dbgutils::ConsoleHistory;
 using EventList = std::vector<KeyEvent>;
 
-EventList generate_input_events();
-void process_input_events(History &history, const EventList &events);
+EventList	generate_input_events();
+History		create_and_fill_history();
+void		run(History &history, const EventList &events);
+
+
+//			ENTRY POINT
+//
+int main()
+{
+	// Init
+	auto history = create_and_fill_history();
+	auto events = generate_input_events();
+
+	run(history, events);
+
+	return 0;
+}
+
+
+//			IMPLEMENTATION OF FORWARD STRUCTS AND FUNCTIONS
+//
+
+enum KEYACTION {
+	KEYACTION_RELEASE,
+	KEYACTION_PRESS
+};
+
+struct KeyEvent {
+	int				action;
+	std::string		key;
+};
 
 History create_and_fill_history()
 {
@@ -23,28 +64,6 @@ History create_and_fill_history()
 
 	return history;
 }
-
-int main()
-{
-	// Init
-	auto history = create_and_fill_history();
-	auto events = generate_input_events();
-
-	// Run
-	process_input_events(history, events);
-
-	return 0;
-}
-
-enum KEYACTION {
-	KEYACTION_RELEASE,
-	KEYACTION_PRESS
-};
-
-struct KeyEvent {
-	int				action;
-	std::string		key;
-};
 
 std::vector<KeyEvent> generate_input_events()
 {
@@ -98,7 +117,41 @@ void display_prompt(const std::string &s)
 	std::cout << "> " << s << std::endl;
 }
 
-void process_input_events(History &history, const EventList &events)
+void handle_key_press_event(IN const std::string &key, IN History &history, IN OUT std::string *line)
+{
+	if (key == "up") {
+		auto changed = history.go_to_previous();
+		if (changed) {
+			*line = history.get();
+		}
+	}
+	else if (key == "down") {
+		auto changed = history.go_to_next();
+		if (changed) {
+			auto entry = history.get();
+			if (entry != "") {
+				*line = entry;
+			}
+		}
+	}
+}
+
+std::string to_str(const KeyEvent &ev)
+{
+	return "("
+		+ ev.key
+		+ " "
+		+ (ev.action == KEYACTION_PRESS ? "pressed" : "released")
+		+ ")"
+		;
+}
+
+void run()
+{
+
+}
+
+void run(History &history, const EventList &events)
 {
 	print_history(history);
 
@@ -116,22 +169,8 @@ void process_input_events(History &history, const EventList &events)
 			continue;
 		}
 
-		if (ev.key == "up") {
-			auto changed = history.go_to_previous();
-			if (changed) {
-				lineToPrint = history.get();
-			}
-		}
-		else if (ev.key == "down") {
-			auto changed = history.go_to_next();
-			if (changed) {
-				lineToPrint = history.get();
-				if (lineToPrint == "") {
-					lineToPrint = cmdLine;
-				}
-			}
-		}
+		handle_key_press_event(IN ev.key, IN history, IN OUT &lineToPrint);
 
-		display_prompt(lineToPrint + " (" + ev.key + " pressed)");
+		display_prompt(lineToPrint + " " + to_str(ev));
 	}
 }

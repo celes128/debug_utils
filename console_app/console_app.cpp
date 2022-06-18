@@ -87,7 +87,7 @@ std::vector<std::string> history_entries_from_oldest_to_most_recent(History &his
 		entries.push_back(history.get());
 	}
 
-	history.cancel_iteration();
+	history.reset_iteration();
 
 	// Now from the oldest one to the most recent one.
 	std::reverse(entries.begin(), entries.end());
@@ -112,18 +112,6 @@ void print_history(History &history)
 void display_prompt(const std::string &s)
 {
 	std::cout << "> " << s << std::endl;
-}
-
-void handle_key_press_event(IN const std::string &key, IN History &history, IN OUT std::string *line)
-{
-	if (key == "up") {
-		auto ev = history.go_to_previous();
-		*line = history.get();
-	}
-	else if (key == "down") {
-		auto ev = history.go_to_next();
-		*line = history.get();
-	}
 }
 
 std::string to_str(const KeyEvent &ev)

@@ -38,8 +38,8 @@ namespace dbgutils {
 		//		MANIPULATORS
 		//
 
-		// push inserts a new entry in the history.
-		// This entry becomes the latest one.
+		// push inserts a new entry in the history, which becomes the latest one, and
+		// resets the iteration.
 		void push(const std::string &line);
 
 		// get returns an entry pointed by the iteration ptr if it is defined.

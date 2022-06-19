@@ -24,7 +24,6 @@ namespace dbgutils {
 		case VK_LEFT:		changed = handle_key_left(); break;
 		case VK_RIGHT:		changed = handle_key_right(); break;
 		case VK_BACK:		changed = handle_key_backspace(); break;
-		case VK_RETURN:		changed = handle_key_return(); break;
 		case VK_HOME:		changed = handle_key_home(); break;
 		case VK_END:		changed = handle_key_end(); break;
 
@@ -62,19 +61,6 @@ namespace dbgutils {
 
 		--m_caret;
 		m_str.erase(m_caret, 1);
-		return true;
-	}
-
-	bool EditBox::handle_key_return()
-	{
-		if (m_str.length() == 0) {
-			return false;
-		}
-
-		m_result = m_str;
-
-		m_str.clear();
-		m_caret = 0;
 		return true;
 	}
 

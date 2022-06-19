@@ -28,7 +28,6 @@ namespace dbgutils {
 		bool handle_key_left();
 		bool handle_key_right();
 		bool handle_key_backspace();
-		bool handle_key_return();
 		bool handle_key_home();
 		bool handle_key_end();
 
@@ -36,9 +35,6 @@ namespace dbgutils {
 		// The content of the edit box.
 		std::wstring	m_str;
 		
-		// Saved content after the enter is pressed.
-		std::wstring	m_result;
-
 		// Position of the caret inside the string.
 		size_t			m_caret{ 0 };
 

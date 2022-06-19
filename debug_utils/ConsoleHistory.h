@@ -40,11 +40,11 @@ namespace dbgutils {
 
 		// push inserts a new entry in the history, which becomes the latest one, and
 		// resets the iteration.
-		void push(const std::string &line);
+		void push(const std::wstring &line);
 
 		// get returns an entry pointed by the iteration ptr if it is defined.
 		// If it is undefined, get returns the empty string.
-		std::string get() const;
+		std::wstring get() const;
 
 		// ITEREVENTs are returned by the two iteration functions
 		// go_to_previous() and got_to_next().
@@ -167,6 +167,6 @@ namespace dbgutils {
 		size_t		m_it;
 
 		// Underlying vector containing the entries.
-		std::vector<std::string>	m_buf;
+		std::vector<std::wstring>	m_buf;
 	};
 }

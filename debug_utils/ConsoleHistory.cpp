@@ -3,7 +3,7 @@
 
 namespace dbgutils {
 
-	void ConsoleHistory::push(const std::string &line)
+	void ConsoleHistory::push(const std::wstring &line)
 	{
 		auto wasFull = full();
 
@@ -20,13 +20,13 @@ namespace dbgutils {
 		reset_iteration();
 	}
 
-	std::string ConsoleHistory::get() const
+	std::wstring ConsoleHistory::get() const
 	{
 		if (it_inside_stack()) {
 			return m_buf[m_it];
 		}
 		else {
-			return "";
+			return L"";
 		}
 	}
 

@@ -14,7 +14,7 @@ TEST(ConsoleHistory, SizeOfOneAfterOnePush)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
+	history.push(L"a");
 
 	auto got = history.size();
 	auto expected = 1;
@@ -25,8 +25,8 @@ TEST(ConsoleHistory, SizeOfTwoAfterTwoPush)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
-	history.push("b");
+	history.push(L"a");
+	history.push(L"b");
 
 	auto got = history.size();
 	auto expected = 2;
@@ -37,9 +37,9 @@ TEST(ConsoleHistory, PushUntilFull)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
-	history.push("b");
-	history.push("c");
+	history.push(L"a");
+	history.push(L"b");
+	history.push(L"c");
 
 	{
 		auto got = history.size();
@@ -52,9 +52,9 @@ TEST(ConsoleHistory, PushUntilFull)
 }
 
 // Utils
-static std::vector<std::string> collect(size_t n, dbgutils::ConsoleHistory &history)
+static std::vector<std::wstring> collect(size_t n, dbgutils::ConsoleHistory &history)
 {
-	std::vector<std::string> entries;
+	std::vector<std::wstring> entries;
 
 	for (size_t i = 0; i < n; i++) {
 		history.go_to_previous();
@@ -69,10 +69,10 @@ TEST(ConsoleHistory, PushOneAndGetIt)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
+	history.push(L"a");
 
 	auto got = collect(2, history);
-	std::vector<std::string> expected(2, "a");
+	std::vector<std::wstring> expected(2, L"a");
 	EXPECT_EQ(got, expected);
 }
 
@@ -80,11 +80,11 @@ TEST(ConsoleHistory, PushTwoAndGetThem)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
-	history.push("b");
+	history.push(L"a");
+	history.push(L"b");
 
 	auto got = collect(3, history);
-	auto expected = std::vector<std::string>{ {"b","a","a"} };
+	auto expected = std::vector<std::wstring>{ {L"b",L"a",L"a"} };
 	EXPECT_EQ(got, expected);
 }
 
@@ -92,12 +92,12 @@ TEST(ConsoleHistory, PushThreeAndGetThem)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
-	history.push("b");
-	history.push("c");
+	history.push(L"a");
+	history.push(L"b");
+	history.push(L"c");
 
 	auto got = collect(4, history);
-	auto expected = std::vector<std::string>{ {"c","b","a","a"} };
+	auto expected = std::vector<std::wstring>{ {L"c",L"b",L"a",L"a"} };
 	EXPECT_EQ(got, expected);
 }
 
@@ -105,22 +105,22 @@ TEST(ConsoleHistory, OverwriteOneItem)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
-	history.push("b");
-	history.push("c");
-	history.push("d");
+	history.push(L"a");
+	history.push(L"b");
+	history.push(L"c");
+	history.push(L"d");
 
 	auto got = collect(4, history);
-	auto expected = std::vector<std::string>{ {"d","c","b","b"} };
+	auto expected = std::vector<std::wstring>{ {L"d",L"c",L"b",L"b"} };
 	EXPECT_EQ(got, expected);
 }
 
 // Utils
 enum Action { Previous, Next };
 
-static std::vector<std::string> do_actions_and_collect(std::vector<Action> &actions, dbgutils::ConsoleHistory &history)
+static std::vector<std::wstring> do_actions_and_collect(std::vector<Action> &actions, dbgutils::ConsoleHistory &history)
 {
-	std::vector<std::string> entries;
+	std::vector<std::wstring> entries;
 
 	for (const auto &action : actions) {
 		switch (action) {
@@ -139,10 +139,10 @@ TEST(ConsoleHistory, PushOne_PrevNext)
 {
 	dbgutils::ConsoleHistory history(3);
 
-	history.push("a");
+	history.push(L"a");
 
 	std::vector<Action> actions{ Previous, Next };
 	auto got = do_actions_and_collect(actions, history);
-	auto expected = std::vector<std::string>{ "a","" };
+	auto expected = std::vector<std::wstring>{ L"a",L"" };
 	EXPECT_EQ(got, expected);
 }

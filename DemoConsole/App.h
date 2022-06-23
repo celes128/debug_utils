@@ -1,7 +1,7 @@
 #pragma once
 
 #include "framework.h"
-#include "..\debug_utils\EditBox.h"
+#include "..\debug_utils\Console.h"
 
 class App {
 public:
@@ -46,5 +46,5 @@ private:
 	ID2D1SolidColorBrush		*m_pSolidBrush;
 	ID2D1StrokeStyle			*m_pStrokeStyle;
 
-	dbgutils::EditBox			m_editbox;
+	dbgutils::Console			m_console;
 };

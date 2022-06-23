@@ -45,7 +45,7 @@ App::App()
 	, m_pTextFormat(NULL)
 	, m_pSolidBrush(NULL)
 	, m_pStrokeStyle(NULL)
-	, m_editbox(L"find elder dragon")
+	, m_console(4)// history capacity: 4
 {}
 
 App::~App()
@@ -279,7 +279,7 @@ void App::draw_editbox()
 
 	// Draw the command line text
 	{
-		const std::wstring str = m_editbox.content();
+		const std::wstring str = m_console.cmdline();
 
 		auto hr = m_pDWriteFactory->CreateTextLayout(
 			str.c_str(),
@@ -300,7 +300,7 @@ void App::draw_editbox()
 
 		// Map text position index to caret coordinate and hit-test rectangle.
 		textLayout->HitTestTextPosition(
-			m_editbox.caret(),
+			m_console.caret(),
 			isTrailingHit,
 			OUT &caretX,
 			OUT &caretY,
@@ -347,26 +347,18 @@ void App::on_wm_char(WPARAM wParam)
 	bool changed = true;
 
 	switch (wParam) {
-	case 0x08:
-		m_editbox.handle_key(VK_BACK);
-		break;
+		// TODO: Send only the printable characters to m_console.
 
-		// Ignore \r and \n characters;
+		// Ignore these characters.
 		// A WM_KEYDOWN message with VK_RETURN was already sent and handled.
-	case 0x0A:// line feed
-	case 0x0D:// 
+	case 0x08:// backspace
+	case 0x0A:// line feed \n
+	case 0x0D:// carriage return \r
+	case 0x1B:// escape
+	case 0x09:// tab
 		break;
-
-	case 0x1B:
-		changed = m_editbox.handle_key(VK_ESCAPE);
-		break;
-
-	case 0x09:
-		changed = m_editbox.handle_key(VK_TAB);
-		break;
-
 	default:
-		changed = m_editbox.handle_character((wchar_t)wParam);
+		changed = m_console.handle_character((wchar_t)wParam);
 		break;
 	}
 
@@ -377,7 +369,7 @@ void App::on_wm_char(WPARAM wParam)
 
 void App::on_wm_keydown(WPARAM wParam)
 {
-	auto changed = m_editbox.handle_key((Key)wParam);
+	auto changed = m_console.handle_key((Key)wParam);
 	if (changed) {
 		request_redraw();
 	}

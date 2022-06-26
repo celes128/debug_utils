@@ -1,9 +1,10 @@
 #include "pch.h"
 #include "..\debug_utils\Console.h"
+#include "CommandEcho.h"
 
 TEST(Console, OneChar)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');
 
@@ -14,7 +15,7 @@ TEST(Console, OneChar)
 
 TEST(Console, CharEnter)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');
 	cons.handle_key(VK_RETURN);
@@ -26,7 +27,7 @@ TEST(Console, CharEnter)
 
 TEST(Console, CharEnterChar)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');
 	cons.handle_key(VK_RETURN);
@@ -39,7 +40,7 @@ TEST(Console, CharEnterChar)
 
 TEST(Console, CharEnterUp)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');
 	cons.handle_key(VK_RETURN);
@@ -52,7 +53,7 @@ TEST(Console, CharEnterUp)
 
 TEST(Console, CharEnterUpChar)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');
 	cons.handle_key(VK_RETURN);
@@ -66,7 +67,7 @@ TEST(Console, CharEnterUpChar)
 
 TEST(Console, CharEnterUpDown)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');
 	cons.handle_key(VK_RETURN);
@@ -80,7 +81,7 @@ TEST(Console, CharEnterUpDown)
 
 TEST(Console, CharEnterCharUpDown)
 {
-	dbgutils::Console cons(3);
+	dbgutils::Console cons;
 
 	cons.handle_character('a');// a
 	cons.handle_key(VK_RETURN);// ""
@@ -91,4 +92,50 @@ TEST(Console, CharEnterCharUpDown)
 	auto got = cons.cmdline();
 	auto expected = L"b";
 	EXPECT_EQ(got, expected);
+}
+
+//										UTILITY FUNCTIONS
+//
+
+// make_testing_interpreter creates a basic interpreter made for unit testing.
+// The interpreter contains an echo command that returns its arguments.
+static dbgutils::Interpreter make_testing_interpreter()
+{
+	dbgutils::CmdList commands{ {std::make_shared<CommandEcho>()} };
+
+	return dbgutils::Interpreter(commands);
+}
+
+static void console_write_string_and_execute(dbgutils::Console &cons, const std::wstring &str)
+{
+	for (const auto &c : str) {
+		cons.handle_character(c);
+	}
+
+	cons.handle_key(VK_RETURN);// execute the command line
+}
+
+static void console_execute_commands(dbgutils::Console &cons, std::vector<std::wstring> cmds)
+{
+	for (const auto &cmd : cmds) {
+		console_write_string_and_execute(cons, cmd);
+	}
+}
+
+TEST(Console, GetSpecificOutput)
+{
+	dbgutils::Console cons(make_testing_interpreter());
+
+	console_execute_commands(
+		cons,
+		std::vector<std::wstring>{
+			L"echo oldest",
+			L"echo middle",
+			L"echo latest"
+		}
+	);
+
+	EXPECT_EQ(cons.get_output(0), L"latest");
+	EXPECT_EQ(cons.get_output(1), L"middle");
+	EXPECT_EQ(cons.get_output(2), L"oldest");
 }

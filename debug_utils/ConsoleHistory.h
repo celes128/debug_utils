@@ -66,7 +66,7 @@ namespace dbgutils {
 		// do nothing, leaving the ptr on the oldest entry.
 		ITEREVENT go_to_next();
 
-		// reset_iteration terminate the iteration, marking the iteration ptr as undefined.
+		// reset_iteration ends the iteration, marking the iteration ptr as undefined.
 		//
 		// REMARKS
 		//	Calling got_to_prev after reset_iteration will make the iteration ptr

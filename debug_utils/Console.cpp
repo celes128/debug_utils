@@ -3,8 +3,10 @@
 
 namespace dbgutils {
 
-	Console::Console(size_t historyCapacity)
-		: m_history(historyCapacity)
+	Console::Console(Interpreter interpreter, size_t historyCapacity, size_t outputCapacity)
+		: m_interpreter(interpreter)
+		, m_history(historyCapacity)
+		, m_output(outputCapacity)
 	{
 		clear_editboxes_and_set_up_new_one();
 	}
@@ -29,6 +31,13 @@ namespace dbgutils {
 		return cur_editbox().caret();
 	}
 
+	std::wstring Console::get_output(size_t i) const
+	{
+		assert(0 <= i && i < output_size());
+
+		return m_output.peek(m_output.size() - 1 - i);
+	}
+
 	bool Console::handle_character(wchar_t c)
 	{
 		return cur_editbox().handle_character(c);
@@ -39,12 +48,16 @@ namespace dbgutils {
 		bool changed = false;
 
 		switch (key) {
-		case VK_RETURN:		changed = handle_enter_key(); break;
-		case VK_UP:			changed = handle_up_key(); break;
-		case VK_DOWN:		changed = handle_down_key(); break;
+		case VK_RETURN:	changed = handle_enter_key();
+			break;
+
+		case VK_UP:		changed = handle_up_key();
+			break;
+
+		case VK_DOWN:	changed = handle_down_key();
+			break;
 		
-		default:
-			changed = cur_editbox().handle_key(key);
+		default:		changed = cur_editbox().handle_key(key);
 			break;
 		}
 
@@ -53,28 +66,43 @@ namespace dbgutils {
 
 	bool Console::handle_enter_key()
 	{
-		if (cmdline().length() == 0) {
+		if (cmdline_is_empty()) {
 			return false;
 		}
 
-		// We do not add the editbox string if it the exact same as the latest history entry.
-		auto topEntry = reset_history_iter_and_get_top_entry();
-		if (topEntry != cmdline()) {
-			m_history.push(cmdline());
-		}
+		exec_cmdline_and_store_output();
+
+		add_cmdline_to_history_and_reset_iteration();
 
 		clear_editboxes_and_set_up_new_one();
+
 		return true;
 	}
 
-	std::wstring Console::reset_history_iter_and_get_top_entry()
+	void Console::exec_cmdline_and_store_output()
 	{
+		auto output = m_interpreter.execute(cmdline());
+
+		m_output.push_back(output);
+	}
+
+	void Console::add_cmdline_to_history_and_reset_iteration()
+	{
+		// We do not add the command line string if it is the exact same
+		// as the latest history entry.
+
+		// Get the top entry
 		m_history.reset_iteration();
 		m_history.go_to_previous();
-		auto entry = m_history.get();
+		auto topEntry = m_history.get();
+
+		// Reset
 		m_history.reset_iteration();
 
-		return entry;
+		// Add
+		if (topEntry != cmdline()) {
+			m_history.push(cmdline());
+		}
 	}
 
 	bool Console::handle_up_key()
@@ -92,7 +120,8 @@ namespace dbgutils {
 			return false;
 		}
 
-		// Here the history iteration ptr points to a (new) previous/older entry.
+		// Here the history iteration ptr points to a previous/older entry
+		// that we encounter for the first time.
 		m_editboxes.push_back(EditBox(m_history.get()));
 		m_i++;
 		return true;
@@ -120,5 +149,10 @@ namespace dbgutils {
 		assert(m_i < m_editboxes.size());
 
 		return m_editboxes[m_i];
+	}
+
+	bool Console::cmdline_is_empty() const
+	{
+		return cmdline().length() == 0;
 	}
 }

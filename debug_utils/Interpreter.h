@@ -39,7 +39,7 @@ namespace dbgutils {
 
 	class Interpreter {
 	public:
-		Interpreter(const CmdList &cmds)
+		Interpreter(const CmdList &cmds = {})
 			: m_cmds(cmds)
 		{}
 

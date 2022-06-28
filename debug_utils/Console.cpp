@@ -38,7 +38,7 @@ namespace dbgutils {
 		return m_output.peek(m_output.size() - 1 - i);
 	}
 
-	bool Console::handle_character(wchar_t c)
+	bool Console::handle_character(IN wchar_t c)
 	{
 		return cur_editbox().handle_character(c);
 	}
@@ -66,6 +66,8 @@ namespace dbgutils {
 
 	bool Console::handle_enter_key()
 	{
+		m_lastCmdlineStr = cmdline();
+
 		if (cmdline_is_empty()) {
 			return false;
 		}

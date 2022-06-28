@@ -26,6 +26,9 @@ public:
 	}
 };
 
+
+//					Entry point
+//
 int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nCmdShow*/)
 {
 	// Ignore the return value because we want to run the program even in the
@@ -49,6 +52,10 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /
 	return 0;
 }
 
+
+
+//					Initialization and shutdown
+//
 const float App::kFontSize = 22.f;
 
 App::App()
@@ -59,17 +66,8 @@ App::App()
 	, m_pTextFormat(NULL)
 	, m_pSolidBrush(NULL)
 	, m_pStrokeStyle(NULL)
+	, m_console(NULL)
 {
-	// void App::CreateInterpreterAndConsole()
-	{
-		dbgutils::CmdList commands{ {
-				std::make_shared<CommandEcho>()
-		} };
-		
-		dbgutils::Interpreter interp(commands);
-		
-		m_console = dbgutils::Console(interp);
-	}
 }
 
 App::~App()
@@ -79,10 +77,8 @@ App::~App()
 
 void App::ReleaseResources()
 {
-	SafeRelease(&m_cmdlineItem.textLayout);
-	for (auto &item : m_oldItems) {
-		SafeRelease(&item.textLayout);
-	}
+	delete m_console;
+	m_console = nullptr;
 
 	SafeRelease(&m_pD2DFactory);
 	SafeRelease(&m_pDWriteFactory);
@@ -137,8 +133,8 @@ HRESULT App::Initialize()
 
 		hr = m_hwnd ? S_OK : E_FAIL;
 		if (SUCCEEDED(hr)) {
-			UpdateConsoleItems();
-
+			CreateTheConsole();
+			
 			ShowWindow(m_hwnd, SW_SHOWNORMAL);
 			UpdateWindow(m_hwnd);
 		}
@@ -247,149 +243,23 @@ void App::DiscardDeviceResources()
 	SafeRelease(&m_pStrokeStyle);
 }
 
-void App::RunMessageLoop()
+
+void App::CreateTheConsole()
 {
-	MSG msg;
-
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-}
-
-
-//									CONSOLE ITEM UPDATE
-//
-void App::UpdateConsoleItems()
-{
-	// Destination rectangle for the console.
-	// By default we render the console in the entire window.
-	// However you can change the destination rectangle defined below by
-	//	(1) placing it elsewhere than the top-left window corner or,
-	//	(2) making it smaller than the window.
-	m_consoleDestRect = WindowRectF();
-
-	// IMPORTANT NOTE
-	//	Always call UpdateCmdlineItem BEFORE UpdateOldItems.
-	UpdateCmdlineItem();
-	UpdateOldItems();
-}
-
-//							HELPER FUNCTIONS
-//
-static HRESULT TextLayout_GetTextBoundingBoxSize(IN IDWriteTextLayout *textLayout, OUT SizeF *size)
-{
-	assert(textLayout != nullptr);
-	assert(size != nullptr);
-
-	DWRITE_TEXT_METRICS metrics;
-	auto hr = textLayout->GetMetrics(&metrics);
-	if (SUCCEEDED(hr)) {
-		*size = SizeF{ metrics.width, metrics.height };
-	}
-
-	return hr;
-}
-
-void App::UpdateCmdlineItem()
-{
-	HRESULT hr = S_OK;
-
-	// Transfer the command line text from the console to the item.
-	// We put a prompt character at the front so that it looks like a command line.
-	m_cmdlineItem.text = L"> " + m_console.cmdline();
-
-	// Recreate the text layout.
-	SafeRelease(&m_cmdlineItem.textLayout);
-
-	hr = m_pDWriteFactory->CreateTextLayout(
-		m_cmdlineItem.text.c_str(),
-		(UINT32)m_cmdlineItem.text.length(),
-		m_pTextFormat,
-		Width(m_consoleDestRect), Height(m_consoleDestRect),
-		&m_cmdlineItem.textLayout
+	dbgutils::CmdList commands{ {std::make_shared<CommandEcho>()} };
+	dbgutils::Interpreter interp(commands);
+	
+	m_console = new Console(
+		interp,
+		32,				// history capacity
+		32,				// output capacity
+		WindowRectF(),	// position rectangle
+		GetGraphicsContext()
 	);
-
-	// Update the bounding box.
-	SizeF	size;
-	hr = TextLayout_GetTextBoundingBoxSize(IN m_cmdlineItem.textLayout, OUT &size);
-	m_cmdlineItem.bbox = RectF_FromPointAndSize(TopLeft(m_consoleDestRect), size);
 }
 
-void App::UpdateOldItems()
-{
-	HRESULT hr = S_OK;
 
-	// A counter for how many items have been rendered.
-	m_numUpdatedOldItems = 0;
-
-	// Compute the destination rectangle for the old items
-	// located below the command line rectangle.
-	// This rectangle will be shrinked each time an item is processed in the loop below.
-	auto dest = m_consoleDestRect;
-	dest.top += Height(m_cmdlineItem.bbox);
-
-	// PLACEHOLDER DATA - Generating text for some items.
-	std::vector<std::wstring> randomText{ {
-			L"This is a test string with\na multiple newline\ncharacters.",
-			L"NPC - ID: 0xffae0100 - Fire Elemental",
-			L"Spell - ID: 0xffae0107 - FireI",
-			L"Spell - ID: 0xffae01F7 - FireII",
-			L"Spell - ID: 0xffae0207 - FireIII",
-			L"Spell - ID: 0xffae02F7 - FireIV",
-			L"Gear - ID: 0xffae02F7 - Robe of Fire - Chest - Cloth",
-			L"Gear - ID: 0xffae02F7 - Fire Sword - Chest - Cloth",
-			L"Gear - ID: 0xffae02F7 - Fire Emblem - Chest - Cloth",
-			L"Gear - ID: 0xffae02F7 - ??? of Fire - Chest - Cloth",
-			L"Gear - ID: 0xffae02F7 - Greater Fire Staff - Chest - Cloth"
-	} };
-
-
-	// Release
-	for (auto &item : m_oldItems) {
-		SafeRelease(&item.textLayout);
-	}
-	m_oldItems.clear();
-
-	// Update the layout of all the items.
-	// Create and store some items
-	for (const auto &text : randomText) {
-		ConsoleItem item;
-		item.text = text;
-
-		m_oldItems.push_back(item);
-	};
-
-	// For each item, create their text layout and bounding box.
-	for (auto &item : m_oldItems) {
-		// Stop if no more room for the current item.
-		if (dest.top >= dest.bottom) {
-			break;
-		}
-
-		// Recreate the text layout.
-		SafeRelease(&item.textLayout);
-
-		hr = m_pDWriteFactory->CreateTextLayout(
-			item.text.c_str(),
-			(UINT32)item.text.length(),
-			m_pTextFormat,
-			Width(dest), Height(dest),
-			&item.textLayout
-		);
-
-		// Update the bounding box.
-		SizeF	size;
-		hr = TextLayout_GetTextBoundingBoxSize(IN item.textLayout, OUT &size);
-		item.bbox = RectF_FromPointAndSize(TopLeft(dest), size);
-
-		++m_numUpdatedOldItems;
-
-		// Compute the position of the next item below.
-		dest.top += Height(item.bbox) + 4;
-	}
-}
+//					Rendering
 
 //
 //  Called whenever the application needs to display the client window.
@@ -408,15 +278,22 @@ HRESULT App::on_render()
 	hr = CreateDeviceResources();
 
 	if (SUCCEEDED(hr) && !(m_pRenderTarget->CheckWindowState() & D2D1_WINDOW_STATE_OCCLUDED)) {
+		// Initialize rendering
 		m_pRenderTarget->BeginDraw();
 		m_pRenderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
 
+		// Clear
 		//const auto CLEARCOLOR = ColorFrom3i(0, 20, 80);// dark blue like my Windows command line
 		const auto CLEARCOLOR = ColorFrom3i(0, 0, 0);
 		clear_window(CLEARCOLOR);
 
-		draw_console();
+		// Render objects here...
+		if (m_console) {
+			Renderer ren{ m_pRenderTarget, m_pSolidBrush };
+			m_console->Draw(ren);
+		}
 
+		// Finalize rendering
 		hr = m_pRenderTarget->EndDraw();
 		if (hr == D2DERR_RECREATE_TARGET) {
 			hr = S_OK;
@@ -432,109 +309,39 @@ void App::clear_window(const D2D1::ColorF &color)
 	m_pRenderTarget->Clear(color);
 }
 
-void App::draw_console()
-{
-	// Destination rectangle for the console text
-	auto rect = RectF_FromPointAndSize(Point2dF{ 0.f,0.f }, WindowSizeF());
-
-	// Draw the commandline at the top left of this rectangle.
-	// We draw the text and the caret.
-	draw_cmdline(rect);
-
-	// Compute the destination rectangle for the old items
-	// located below the command line rectangle.
-	auto r = rect;
-	r.top += Height(m_cmdlineItem.bbox);
-
-	// Draw the old items in this rectangle.
-	draw_old_items(r);
-}
-
-// TODO: handle the case where the command line is empty.
-void App::draw_cmdline(const RectF &dest)
-{
-	HRESULT hr = S_OK;
-
-	// Save the brush color to restore it at the end of the function.
-	const auto prevColor = m_pSolidBrush->GetColor();
-
-	m_pSolidBrush->SetColor(ColorFrom3i(230, 230, 230));
-
-	// Draw the cmdline text
-	m_pRenderTarget->DrawTextLayout(TopLeft(m_cmdlineItem.bbox), m_cmdlineItem.textLayout, m_pSolidBrush);
-
-	//draw_caret();
-
-	// Restore the brush color
-	m_pSolidBrush->SetColor(prevColor);
-}
-
-void App::draw_caret()
-{
-	// Map text position index to caret coordinate and hit-test rectangle.
-	bool isTrailingHit = false; // Use the leading character edge for simplicity here.
-	DWRITE_HIT_TEST_METRICS htm;
-	float x, y;// caret position
-	m_cmdlineItem.textLayout->HitTestTextPosition(
-		m_console.caret(),
-		isTrailingHit,
-		OUT &x,
-		OUT &y,
-		OUT &htm
-	);
-
-	// Get the caret width; respect user settings.
-	DWORD w = 1;
-	SystemParametersInfo(SPI_GETCARETWIDTH, 0, OUT &w, 0);
-
-	// Draw a thin rectangle.
-	auto r = RectF{
-		m_cmdlineItem.bbox.left + x - w / 2u,
-		m_cmdlineItem.bbox.top + htm.top,
-		m_cmdlineItem.bbox.left + x + (w - w / 2u),
-		m_cmdlineItem.bbox.top + htm.top + htm.height
-	};
-	m_pRenderTarget->FillRectangle(&r, m_pSolidBrush);
-}
-
-void App::draw_old_items(const RectF &dest)
-{
-	HRESULT hr = S_OK;
-
-	// Save the original color.
-	const auto originalColor = m_pSolidBrush->GetColor();
-
-	// We will alternate between two colors when rendering the items.
-	const D2D1_COLOR_F colors[] = {
-		//ColorFrom3i(230, 0, 0),
-		ColorFrom3i(230, 230, 230),
-		ColorFrom3i(0, 200, 0)
-	};
-	int		iColor = 0;
-
-	// For each item, draw using their text layout.
-	for (size_t i = 0; i < m_numUpdatedOldItems; i++) {
-		assert(i < m_oldItems.size());
-
-		const auto &item = m_oldItems[i];
-
-		// Pick the color.
-		iColor = (0 == iColor) ? 1 : 0;
-		m_pSolidBrush->SetColor(colors[iColor]);
-
-		// Draw the text.
-		m_pRenderTarget->DrawTextLayout(TopLeft(item.bbox), item.textLayout, m_pSolidBrush);
-	}
-
-	// Restore the original color.
-	m_pSolidBrush->SetColor(originalColor);
-}
-
+//void App::draw_caret()
+//{
+//	// Map text position index to caret coordinate and hit-test rectangle.
+//	bool isTrailingHit = false; // Use the leading character edge for simplicity here.
+//	DWRITE_HIT_TEST_METRICS htm;
+//	float x, y;// caret position
+//	m_cmdlineItem.textLayout->HitTestTextPosition(
+//		m_console.caret(),
+//		isTrailingHit,
+//		OUT &x,
+//		OUT &y,
+//		OUT &htm
+//	);
 //
-//  If the application receives a WM_SIZE message, this method
-//  resizes the render target appropriately.
+//	// Get the caret width; respect user settings.
+//	DWORD w = 1;
+//	SystemParametersInfo(SPI_GETCARETWIDTH, 0, OUT &w, 0);
 //
-void App::on_resize(const D2D1_SIZE_U &size)
+//	// Draw a thin rectangle.
+//	auto r = RectF{
+//		m_cmdlineItem.bbox.left + x - w / 2u,
+//		m_cmdlineItem.bbox.top + htm.top,
+//		m_cmdlineItem.bbox.left + x + (w - w / 2u),
+//		m_cmdlineItem.bbox.top + htm.top + htm.height
+//	};
+//	m_pRenderTarget->FillRectangle(&r, m_pSolidBrush);
+//}
+
+
+//					Win32 message handling functions
+//
+
+void App::OnResize(const D2D1_SIZE_U &size)
 {
 	if (!m_pRenderTarget) {
 		return;
@@ -543,35 +350,40 @@ void App::on_resize(const D2D1_SIZE_U &size)
 	// Note: This method can fail, but it's okay to ignore the
 	// error here -- it will be repeated on the next call to EndDraw.
 	m_pRenderTarget->Resize(size);
+
+	// TODO:
+	//m_console->SetRectangle(WindowRectF());
 }
 
-void App::on_wm_char(WPARAM wParam)
+void App::OnWMChar(WPARAM wParam)
 {
 	auto c = static_cast<wchar_t>(wParam);
 
+	// Ignore non-printable characters.
 	if (!iswprint(c)) {
 		return;
 	}
 
-	auto changed = m_console.handle_character(c);
-
-	if (changed) {
+	auto redraw = m_console->HandleChar(c);
+	if (redraw) {
 		request_redraw();
 	}
 }
 
-void App::on_wm_keydown(WPARAM wParam)
+void App::OnWMKeydown(WPARAM wParam)
 {
-	auto changed = m_console.handle_key((Key)wParam);
-	if (changed) {
+	auto key = static_cast<Key>(wParam);
+
+	auto redraw = m_console->HandleKey(key);
+	if (redraw) {
 		request_redraw();
 	}
 }
 
-void App::request_redraw()
-{
-	InvalidateRect(m_hwnd, nullptr, TRUE);
-}
+
+
+//					Utils
+//
 
 D2D1_SIZE_F App::WindowSizeF() const
 {
@@ -600,6 +412,33 @@ RectF App::WindowRectF() const
 	);
 }
 
+GraphicsContext App::GetGraphicsContext() const
+{
+	return GraphicsContext{
+		m_pDWriteFactory,
+		m_pTextFormat
+	};
+}
+
+void App::RunMessageLoop()
+{
+	MSG msg;
+
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+
+void App::request_redraw()
+{
+	InvalidateRect(m_hwnd, nullptr, TRUE);
+}
+
+
+//					Window callback
+//
 LRESULT CALLBACK App::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	LRESULT result = 0;
@@ -628,7 +467,7 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		if (pApp) {
 			switch (message) {
 			case WM_SIZE: {
-				pApp->on_resize(D2D1_SIZE_U{ LOWORD(lParam), HIWORD(lParam) });
+				pApp->OnResize(D2D1_SIZE_U{ LOWORD(lParam), HIWORD(lParam) });
 			}
 			wasHandled = true;
 			result = 0;
@@ -638,7 +477,6 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			case WM_DISPLAYCHANGE: {
 				PAINTSTRUCT ps;
 				BeginPaint(hwnd, &ps);
-
 				pApp->on_render();
 				EndPaint(hwnd, &ps);
 			}
@@ -647,14 +485,14 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			break;
 
 			case WM_CHAR: {
-				pApp->on_wm_char(wParam);
+				pApp->OnWMChar(wParam);
 			}
 			wasHandled = true;
 			result = 0;
 			break;
 
 			case WM_KEYDOWN: {
-				pApp->on_wm_keydown(wParam);
+				pApp->OnWMKeydown(wParam);
 			}
 			wasHandled = true;
 			result = 0;

@@ -27,3 +27,16 @@ inline float	Width(const RectF &r) { return r.right - r.left; }
 inline float	Height(const RectF &r) { return r.bottom - r.top; }
 inline SizeF	Size(const RectF &r) { return { Width(r), Height(r)}; }
 inline Point2dF TopLeft(const RectF &r) { return { r.left, r.top }; }
+
+inline bool operator==(const RectF &lhs, const RectF &rhs)
+{
+	return lhs.left == rhs.left
+		&& lhs.right == rhs.right
+		&& lhs.top == rhs.top
+		&& lhs.bottom == rhs.bottom;
+}
+
+inline bool operator!=(const RectF &lhs, const RectF &rhs)
+{
+	return !(lhs == rhs);
+}

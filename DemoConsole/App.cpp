@@ -317,34 +317,6 @@ void App::ClearWindow(const D2D1::ColorF &color)
 	m_pRenderTarget->Clear(color);
 }
 
-//void App::draw_caret()
-//{
-//	// Map text position index to caret coordinate and hit-test rectangle.
-//	bool isTrailingHit = false; // Use the leading character edge for simplicity here.
-//	DWRITE_HIT_TEST_METRICS htm;
-//	float x, y;// caret position
-//	m_cmdlineItem.textLayout->HitTestTextPosition(
-//		m_console.caret(),
-//		isTrailingHit,
-//		OUT &x,
-//		OUT &y,
-//		OUT &htm
-//	);
-//
-//	// Get the caret width; respect user settings.
-//	DWORD w = 1;
-//	SystemParametersInfo(SPI_GETCARETWIDTH, 0, OUT &w, 0);
-//
-//	// Draw a thin rectangle.
-//	auto r = RectF{
-//		m_cmdlineItem.bbox.left + x - w / 2u,
-//		m_cmdlineItem.bbox.top + htm.top,
-//		m_cmdlineItem.bbox.left + x + (w - w / 2u),
-//		m_cmdlineItem.bbox.top + htm.top + htm.height
-//	};
-//	m_pRenderTarget->FillRectangle(&r, m_pSolidBrush);
-//}
-
 
 //					Win32 message handling functions
 //

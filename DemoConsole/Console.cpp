@@ -42,8 +42,14 @@ private:
 //					class Console
 //
 
-Console::Console(dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa, const RectF &rect, const GraphicsContext &graphics)
+Console::Console(
+	dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa,
+	const RectF &rect,
+	const GraphicsContext &graphics,
+	const wchar_t *promptStr
+)
 	: m_console(interp, histCapa, outputCapa)
+	, m_promptStr(promptStr)
 	, m_graphics(graphics)
 	, m_rect(rect)
 {
@@ -117,7 +123,7 @@ void Console::PostProcessReturnKey()
 	// Add the cmdline that was just executed as an item.
 	{
 		ConsoleItem	item;
-		item.text = L"> " + m_console.last_cmdline();
+		item.text = m_promptStr + m_console.last_cmdline();
 		m_oldItems.push_front(item);
 	}
 
@@ -128,8 +134,7 @@ void Console::PostProcessReturnKey()
 		m_oldItems.push_front(item);
 	}
 
-	// If the we have too many items, we remove at most the two odlest items
-	// since we have just added two.
+	// If there are too many items, we remove at most the two odlest ones.
 	if (m_numUpdatedOldItems + 2 > m_console.output_capacity()) {
 		for (int i = 0; !m_oldItems.empty() && i < 2; i++) {
 			m_oldItems.pop_back();
@@ -163,8 +168,7 @@ bool Console::UpdateCmdlineItem()
 	auto oldHeight = Height(m_cmdlineItem.bbox);
 
 	// Copy the command line text from the dbgutils::Console to the item.
-	// We put a prompt character at the front so that it looks like a command line.
-	m_cmdlineItem.text = L"> " + m_console.cmdline();
+	m_cmdlineItem.text = m_promptStr + m_console.cmdline();
 
 	// Recreate the text layout.
 	SafeRelease(&m_cmdlineItem.textLayout);
@@ -265,10 +269,38 @@ void Console::DrawCmdline(Renderer &ren)
 
 	ren.renderTarget->DrawTextLayout(TopLeft(m_cmdlineItem.bbox), m_cmdlineItem.textLayout, ren.solidBrush);
 
-	// TODO
-	//DrawCaret(ren);
+	DrawCaret(ren);
 
 	ren.RestoreBrushColor();
+}
+
+void Console::DrawCaret(Renderer &ren)
+{
+	// Map text position index to caret coordinate and hit-test rectangle.
+	bool isTrailingHit = false; // Use the leading character edge for simplicity here.
+	
+	DWRITE_HIT_TEST_METRICS htm;
+	float x, y;// caret position
+	m_cmdlineItem.textLayout->HitTestTextPosition(
+		m_promptStr.length() + m_console.caret(),
+		isTrailingHit,
+		OUT &x,
+		OUT &y,
+		OUT &htm
+	);
+
+	// Get the caret width; respect user settings.
+	DWORD w = 1;
+	SystemParametersInfo(SPI_GETCARETWIDTH, 0, OUT &w, 0);
+
+	// Draw a thin rectangle.
+	auto r = RectF{
+		m_cmdlineItem.bbox.left + x - w / 2u,
+		m_cmdlineItem.bbox.top + htm.top,
+		m_cmdlineItem.bbox.left + x + (w - w / 2u),
+		m_cmdlineItem.bbox.top + htm.top + htm.height
+	};
+	ren.renderTarget->FillRectangle(&r, ren.solidBrush);
 }
 
 void Console::DrawOldItems(Renderer &ren)

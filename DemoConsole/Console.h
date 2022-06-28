@@ -26,7 +26,12 @@ struct ConsoleItem {
 
 class Console {
 public:
-	Console(dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa, const RectF &rect, const GraphicsContext &graphics);
+	Console(
+		dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa,
+		const RectF &rect,
+		const GraphicsContext &graphics,
+		const wchar_t *promptStr = L"> "
+	);
 	~Console();
 	
 	//			MANIPULATORS
@@ -79,6 +84,7 @@ private:
 
 	void DrawBackground(Renderer &ren);
 	void DrawCmdline(Renderer &ren);
+	void DrawCaret(Renderer &ren);
 	void DrawOldItems(Renderer &ren);
 
 private:
@@ -86,6 +92,7 @@ private:
 	dbgutils::Console			m_console;
 	
 	// Layout + Graphics
+	std::wstring				m_promptStr;
 	GraphicsContext				m_graphics;
 	RectF						m_rect;
 	ConsoleItem					m_cmdlineItem;

@@ -23,7 +23,7 @@ public:
 		: m_colors(colors)
 	{}
 
-	D2D1_COLOR_F NextColor()
+	D2D1_COLOR_F Next()
 	{
 		auto color = m_colors[m_i];
 		
@@ -61,6 +61,8 @@ Console::~Console()
 
 void Console::SetRectangle(const RectF &r)
 {
+	assert(false && "Not implemented yet");
+
 	if (r == m_rect) {
 		return;
 	}
@@ -70,6 +72,11 @@ void Console::SetRectangle(const RectF &r)
 
 bool Console::HandleChar(wchar_t c)
 {
+	// Ignore non-printable characters.
+	if (!iswprint(c)) {
+		return false;
+	}
+
 	auto changed = m_console.handle_character(c);
 	if (!changed) {
 		return false;// do not redraw
@@ -233,8 +240,19 @@ void Console::UpdateOldItems()
 
 void Console::Draw(Renderer &ren)
 {
+	DrawBackground(ren);
 	DrawCmdline(ren);
 	DrawOldItems(ren);
+}
+
+void Console::DrawBackground(Renderer &ren)
+{
+	ren.SaveBrushColor();
+
+	ren.solidBrush->SetColor(ColorFrom3i(0, 20, 80));
+	ren.renderTarget->FillRectangle(m_rect, ren.solidBrush);
+	
+	ren.RestoreBrushColor();
 }
 
 void Console::DrawCmdline(Renderer &ren)
@@ -261,15 +279,15 @@ void Console::DrawOldItems(Renderer &ren)
 
 	// We will alternate between two colors when rendering the items.
 	auto colors = ColorSwitcher({
-		ColorFrom3i(230, 230, 230),
-		ColorFrom3i(0, 200, 0)
+		ColorFrom3i(0, 200, 0),
+		ColorFrom3i(230, 230, 230)
 	});
 
 	// Draw each updated item's text layout.
 	for (size_t i = 0; i < m_numUpdatedOldItems; i++) {
 		assert(i < m_oldItems.size());
 
-		ren.solidBrush->SetColor(colors.NextColor());
+		ren.solidBrush->SetColor(colors.Next());
 
 		const auto &item = m_oldItems[i];
 		ren.renderTarget->DrawTextLayout(TopLeft(item.bbox), item.textLayout, ren.solidBrush);

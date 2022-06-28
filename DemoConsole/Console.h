@@ -35,8 +35,12 @@ public:
 	// SetRectangle updates the rectangular area where the console is positioned and rendered.
 	void SetRectangle(const RectF &r);
 
+	// RETURN VALUE
+	//	Returns true iff the console needs to be redrawn.
 	bool HandleChar(wchar_t c);
-	
+
+	// RETURN VALUE
+	//	Returns true iff the console needs to be redrawn
 	bool HandleKey(Key key);
 
 	void Draw(Renderer &ren);
@@ -73,6 +77,7 @@ private:
 	//			Drawing
 	//
 
+	void DrawBackground(Renderer &ren);
 	void DrawCmdline(Renderer &ren);
 	void DrawOldItems(Renderer &ren);
 

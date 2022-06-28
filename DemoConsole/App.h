@@ -24,11 +24,13 @@ private:
 	void DiscardDeviceResources();
 	void ReleaseResources();
 
+
 	//		Windows message handling
 
 	void OnWMChar(WPARAM wParam);
 	void OnWMKeydown(WPARAM wParam);
 	void OnResize(const D2D1_SIZE_U &size);
+
 
 	//		Console
 	void CreateTheConsole();
@@ -40,25 +42,27 @@ private:
 
 	void UpdateOldItems();
 
+
 	//		Rendering
 
-	HRESULT on_render();
-	void clear_window(const D2D1::ColorF &color);
-	void draw_console();
-	void draw_cmdline(const RectF &dest);
-	void draw_caret();
-	void draw_old_items(const RectF &dest);
-	void request_redraw();
+	HRESULT OnRender();
+	void ClearWindow(const D2D1::ColorF &color);
+	void SendRedrawRequest();
 
-	// Utils
+
+	//		Utils
 
 	D2D1_SIZE_F		WindowSizeF() const;
 	D2D1_SIZE_U		WindowSizeU() const;
 	RectF			WindowRectF() const;
 	GraphicsContext GetGraphicsContext() const;
 
+
+	//		Window procedure
+
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+	static const WCHAR *kFontName;
 	static const float kFontSize;
 
 private:

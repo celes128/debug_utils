@@ -56,7 +56,14 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /
 
 //					Initialization and shutdown
 //
-const float App::kFontSize = 22.f;
+
+//const WCHAR kFontName[] = L"Verdana";
+//const WCHAR kFontName[] = L"Lucida Console";
+//const WCHAR kFontName[] = L"Lucida Sans Unicode";
+//const WCHAR kFontName[] = L"Andale Mono";
+
+const WCHAR *App::kFontName		= L"Consolas";
+const float App::kFontSize		= 28.f;
 
 App::App()
 	: m_hwnd(NULL)
@@ -123,8 +130,8 @@ HRESULT App::Initialize()
 			WS_OVERLAPPEDWINDOW,
 			CW_USEDEFAULT,
 			CW_USEDEFAULT,
-			static_cast<UINT>(ceil(800* dpiX / 96.f)),
-			static_cast<UINT>(ceil(600.f * dpiY / 96.f)),
+			static_cast<UINT>(ceil(1024* dpiX / 96.f)),
+			static_cast<UINT>(ceil(768.f * dpiY / 96.f)),
 			NULL,
 			NULL,
 			HINST_THISCOMPONENT,
@@ -150,12 +157,6 @@ HRESULT App::Initialize()
 // (used for identifying particular font characteristics).
 HRESULT App::CreateDeviceIndependentResources()
 {
-	//static const WCHAR msc_fontName[] = L"Verdana";
-	//static const WCHAR msc_fontName[] = L"Lucida Console";
-	//static const WCHAR msc_fontName[] = L"Lucida Sans Unicode";
-	//static const WCHAR msc_fontName[] = L"Andale Mono";
-	static const WCHAR msc_fontName[] = L"Consolas";
-
 	HRESULT hr = S_OK;
 
 	// Create a Direct2D factory.
@@ -171,7 +172,7 @@ HRESULT App::CreateDeviceIndependentResources()
 
 	if (SUCCEEDED(hr)) {
 		hr = m_pDWriteFactory->CreateTextFormat(
-			msc_fontName,
+			kFontName,
 			NULL,
 			DWRITE_FONT_WEIGHT_NORMAL,
 			DWRITE_FONT_STYLE_NORMAL,
@@ -246,14 +247,22 @@ void App::DiscardDeviceResources()
 
 void App::CreateTheConsole()
 {
+	// Create an interpreter.
 	dbgutils::CmdList commands{ {std::make_shared<CommandEcho>()} };
 	dbgutils::Interpreter interp(commands);
 	
+	// Position rectangle.
+	auto w = WindowSizeF().width * 0.75f;
+	auto h = WindowSizeF().height * 0.75f;
+	auto x = (WindowSizeF().width - w) / 2.f;
+	auto y = (WindowSizeF().height - h) / 2.f;
+	auto r = RectF_FromPointAndSize({ x,y }, { w,h });
+
 	m_console = new Console(
 		interp,
 		32,				// history capacity
 		32,				// output capacity
-		WindowRectF(),	// position rectangle
+		r,
 		GetGraphicsContext()
 	);
 }
@@ -271,7 +280,7 @@ void App::CreateTheConsole()
 //  invocation, and will recreate the resources the next time it's
 //  invoked.
 //
-HRESULT App::on_render()
+HRESULT App::OnRender()
 {
 	HRESULT hr;
 
@@ -283,9 +292,8 @@ HRESULT App::on_render()
 		m_pRenderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
 
 		// Clear
-		//const auto CLEARCOLOR = ColorFrom3i(0, 20, 80);// dark blue like my Windows command line
 		const auto CLEARCOLOR = ColorFrom3i(0, 0, 0);
-		clear_window(CLEARCOLOR);
+		ClearWindow(CLEARCOLOR);
 
 		// Render objects here...
 		if (m_console) {
@@ -304,7 +312,7 @@ HRESULT App::on_render()
 	return hr;
 }
 
-void App::clear_window(const D2D1::ColorF &color)
+void App::ClearWindow(const D2D1::ColorF &color)
 {
 	m_pRenderTarget->Clear(color);
 }
@@ -359,14 +367,9 @@ void App::OnWMChar(WPARAM wParam)
 {
 	auto c = static_cast<wchar_t>(wParam);
 
-	// Ignore non-printable characters.
-	if (!iswprint(c)) {
-		return;
-	}
-
 	auto redraw = m_console->HandleChar(c);
 	if (redraw) {
-		request_redraw();
+		SendRedrawRequest();
 	}
 }
 
@@ -376,7 +379,7 @@ void App::OnWMKeydown(WPARAM wParam)
 
 	auto redraw = m_console->HandleKey(key);
 	if (redraw) {
-		request_redraw();
+		SendRedrawRequest();
 	}
 }
 
@@ -431,7 +434,7 @@ void App::RunMessageLoop()
 	}
 }
 
-void App::request_redraw()
+void App::SendRedrawRequest()
 {
 	InvalidateRect(m_hwnd, nullptr, TRUE);
 }
@@ -441,75 +444,56 @@ void App::request_redraw()
 //
 LRESULT CALLBACK App::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	LRESULT result = 0;
-
 	if (message == WM_CREATE) {
 		LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
-		App *pApp = (App *)pcs->lpCreateParams;
+		App *app = (App *)pcs->lpCreateParams;
 
-		::SetWindowLongPtrW(
-			hwnd,
-			GWLP_USERDATA,
-			reinterpret_cast<LONG_PTR>(pApp)
-		);
+		::SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(app));
 
-		result = 1;
+		return 1;
 	}
-	else {
-		App *pApp = reinterpret_cast<App *>(
-			::GetWindowLongPtrW(
-				hwnd,
-				GWLP_USERDATA
-			));
 
-		bool wasHandled = false;
+	App *app = reinterpret_cast<App *>(::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+	if (!app) {
+		return DefWindowProc(hwnd, message, wParam, lParam);
+	}
 
-		if (pApp) {
-			switch (message) {
-			case WM_SIZE: {
-				pApp->OnResize(D2D1_SIZE_U{ LOWORD(lParam), HIWORD(lParam) });
-			}
-			wasHandled = true;
-			result = 0;
-			break;
+	LRESULT result = 0;
+	bool	wasHandled = true;
 
-			case WM_PAINT:
-			case WM_DISPLAYCHANGE: {
-				PAINTSTRUCT ps;
-				BeginPaint(hwnd, &ps);
-				pApp->on_render();
-				EndPaint(hwnd, &ps);
-			}
-			wasHandled = true;
-			result = 0;
-			break;
+	switch (message) {
+	case WM_SIZE: {
+		app->OnResize(D2D1_SIZE_U{ LOWORD(lParam), HIWORD(lParam) });
+	}break;
 
-			case WM_CHAR: {
-				pApp->OnWMChar(wParam);
-			}
-			wasHandled = true;
-			result = 0;
-			break;
+	case WM_PAINT:
+	case WM_DISPLAYCHANGE: {
+		PAINTSTRUCT ps;
+		BeginPaint(hwnd, &ps);
+		app->OnRender();
+		EndPaint(hwnd, &ps);
+	}break;
 
-			case WM_KEYDOWN: {
-				pApp->OnWMKeydown(wParam);
-			}
-			wasHandled = true;
-			result = 0;
-			break;
+	case WM_CHAR: {
+		app->OnWMChar(wParam);
+	}break;
 
-			case WM_DESTROY: {
-				PostQuitMessage(0);
-			}
-			wasHandled = true;
-			result = 1;
-			break;
-			}
-		}
+	case WM_KEYDOWN: {
+		app->OnWMKeydown(wParam);
+	}break;
 
-		if (!wasHandled) {
-			result = DefWindowProc(hwnd, message, wParam, lParam);
-		}
+	case WM_DESTROY: {
+		PostQuitMessage(0);
+		result = 1;
+	}break;
+
+	default:
+		wasHandled = false;
+		break;
+	}
+
+	if (!wasHandled) {
+		result = DefWindowProc(hwnd, message, wParam, lParam);
 	}
 
 	return result;

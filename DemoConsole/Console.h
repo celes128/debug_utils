@@ -22,6 +22,15 @@ struct ConsoleItem {
 	{
 		SafeRelease(&textLayout);
 	}
+
+	// RecreateTextLayout (safely) destroys the text layout and creates a new one
+	// based on the current text.
+	void RecreateTextLayout(const SizeF &size, GraphicsContext &graphics);
+
+	// UpdateBoundingBox updates the position and size of the bounding box.
+	// The position is given as the only argument and
+	// the size is derived by the size of the text layout.
+	void UpdateBoundingBox(const Point2dF &pos);
 };
 
 class Console {

@@ -17,6 +17,27 @@ static HRESULT TextLayout_GetTextBoundingBoxSize(IN IDWriteTextLayout *textLayou
 	return hr;
 }
 
+void ConsoleItem::RecreateTextLayout(const SizeF &size, GraphicsContext &graphics)
+{
+	SafeRelease(&textLayout);
+
+	auto hr = graphics.dwriteFactory->CreateTextLayout(
+		text.c_str(),
+		(UINT32)text.length(),
+		graphics.textFormat,
+		size.width, size.height,
+		&textLayout
+	);
+}
+
+void ConsoleItem::UpdateBoundingBox(const Point2dF &pos)
+{
+	SizeF	size;
+	auto hr = TextLayout_GetTextBoundingBoxSize(IN textLayout, OUT &size);
+	
+	bbox = RectF_FromPointAndSize(pos, size);
+}
+
 class ColorSwitcher {
 public:
 	ColorSwitcher(const std::vector<D2D1_COLOR_F> &colors)
@@ -178,28 +199,15 @@ bool Console::UpdateCmdlineItem()
 	HRESULT hr = S_OK;
 
 	// Save the height before updating the item.
-	// Before returning to the caller, the function will check
-	// if it changed.
+	// Before returning to the caller, the function will check if it changed.
 	auto oldHeight = Height(m_cmdlineItem.bbox);
 
 	// Get the command line text from the dbgutils::Console.
 	m_cmdlineItem.text = m_promptStr + m_console.cmdline();
 
-	// Recreate the text layout.
-	SafeRelease(&m_cmdlineItem.textLayout);
+	m_cmdlineItem.RecreateTextLayout(Size(m_rect), m_graphics);
 
-	hr = m_graphics.dwriteFactory->CreateTextLayout(
-		m_cmdlineItem.text.c_str(),
-		(UINT32)m_cmdlineItem.text.length(),
-		m_graphics.textFormat,
-		Width(m_rect), Height(m_rect),
-		&m_cmdlineItem.textLayout
-	);
-
-	// Update the bounding box.
-	SizeF	size;
-	hr = TextLayout_GetTextBoundingBoxSize(IN m_cmdlineItem.textLayout, OUT &size);
-	m_cmdlineItem.bbox = RectF_FromPointAndSize(TopLeft(m_rect), size);
+	m_cmdlineItem.UpdateBoundingBox(TopLeft(m_rect));
 
 	auto bboxChanged = oldHeight != Height(m_cmdlineItem.bbox);
 	return bboxChanged;
@@ -218,32 +226,16 @@ void Console::UpdateOldItems()
 	auto dest = m_rect;
 	dest.top += Height(m_cmdlineItem.bbox);
 
-	// This is the update loop.
-	// For each item, we have to...
-	//	(1) recreate their text layout and,
-	//	(2) compute their bounding box.
-	// Their text does not need to be updated.
+	// Note: the item's text does not need to be updated.
 	for (auto &item : m_oldItems) {
 		// Stop if no more room for the current item.
 		if (dest.top >= dest.bottom) {
 			break;
 		}
 
-		// (1) Recreate the text layout.
-		SafeRelease(&item.textLayout);
+		item.RecreateTextLayout(Size(dest), m_graphics);
 
-		hr = m_graphics.dwriteFactory->CreateTextLayout(
-			item.text.c_str(),
-			(UINT32)item.text.length(),
-			m_graphics.textFormat,
-			Width(dest), Height(dest),
-			&item.textLayout
-		);
-
-		// (2) Update the bounding box.
-		SizeF size;
-		hr = TextLayout_GetTextBoundingBoxSize(IN item.textLayout, OUT &size);
-		item.bbox = RectF_FromPointAndSize(TopLeft(dest), size);
+		item.UpdateBoundingBox(TopLeft(dest));
 
 		++m_numUpdatedOldItems;
 

@@ -35,7 +35,7 @@ namespace dbgutils {
 			return m_size == m_capacity;
 		}
 
-		//				ACCESSORS
+		//				MANIPULATORS
 		//
 
 		// push_back inserts an item at the back of the buffer.
@@ -80,18 +80,14 @@ namespace dbgutils {
 		const T &peek(size_t i) const
 		{
 			assert(!empty());
-			assert(0 <= i && i < size());// redondant with the above but whatever, it's only in the debug version.
+			assert(0 <= i && i < size());
 
-			auto k = m_front;
-			for (size_t j = 0; j < i; j++) {
-				increment_ptr(&k);
-			}
-
+			auto k = (m_front + i) % m_capacity;
 			return m_buf[k];
 		}
 
 	private:
-		//		Update functions for the top and bottom pointers.
+		//		Update functions for the front and back pointers.
 		//
 		void increment_ptr(size_t *i) const
 		{

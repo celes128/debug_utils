@@ -124,9 +124,10 @@ void Console::PostProcessReturnKey()
 {
 	PushItem_LatestCmdline();	
 	PushItem_LatestOutput();
-	RemoveOldItemsIfTooMany(2);// remove at most 2
 
 	UpdateAllItems();
+
+	RemoveOldItemsIfTooMany(2);// remove at most 2
 }
 
 void Console::PushItem_LatestCmdline()
@@ -145,15 +146,18 @@ void Console::PushItem_LatestOutput()
 
 void Console::RemoveOldItemsIfTooMany(size_t n)
 {
-	if (m_numUpdatedOldItems + 2 > m_console.output_capacity()) {
-		for (int i = 0; !m_oldItems.empty() && i < 2; i++) {
-			m_oldItems.pop_back();
-		}
-
-#ifdef _DEBUG
-		OutputDebugStringA("Removing two old items.\n");
-#endif
+	bool tooMany = m_numUpdatedOldItems > m_console.output_capacity();
+	if (!tooMany) {
+		return;
 	}
+
+	for (size_t i = 0; !m_oldItems.empty() && i < n; i++) {
+		m_oldItems.pop_back();
+	}
+
+	#ifdef _DEBUG
+	OutputDebugStringA("Removing two old items.\n");
+	#endif
 }
 
 

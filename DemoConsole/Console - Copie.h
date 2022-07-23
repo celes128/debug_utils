@@ -6,7 +6,6 @@
 #include "geom.h"
 #include "GraphicsContext.h"
 #include "Renderer.h"
-#include "VTextList.h"
 
 struct ConsoleItem {
 	// The raw string that is layed out in the layout below.
@@ -47,10 +46,7 @@ public:
 	//			ACCESSORS
 	//
 
-	Point2dF GetPosition() const { return TopLeft(m_rect); }
 	auto * GetInterpreter() { return m_console.get_interpreter(); }
-
-
 
 	//			MANIPULATORS
 	//
@@ -86,12 +82,6 @@ private:
 	// many old items in the list.
 	void RemoveOldItemsIfTooMany(size_t n);
 
-
-	//			Layout
-	//
-	Point2dF GetOutputAreaPosition() const;
-	SizeF GetOutputAreaSize() const;
-
 	//			Item update
 	//
 
@@ -113,6 +103,8 @@ private:
 	//
 	bool UpdateCmdlineItem();
 
+	void UpdateOldItems();
+
 	//			Drawing
 	//
 
@@ -127,9 +119,10 @@ private:
 	dbgutils::Console			m_console;
 	
 	// Layout + Graphics
-	std::wstring		m_promptStr;
-	GraphicsContext		m_graphics;
-	RectF				m_rect;
-	ConsoleItem			m_cmdlineItem;
-	gui::VTextList		m_oldItemsList;
+	std::wstring				m_promptStr;
+	GraphicsContext				m_graphics;
+	RectF						m_rect;
+	ConsoleItem					m_cmdlineItem;
+	std::deque<ConsoleItem>		m_oldItems;
+	size_t						m_numUpdatedOldItems{ 0 };
 };

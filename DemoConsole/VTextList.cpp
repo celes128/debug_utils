@@ -17,6 +17,20 @@ static HRESULT TextLayout_GetTextBoundingBoxSize(IN IDWriteTextLayout *textLayou
 
 namespace gui {
 
+	static const float VeryLargeHeight = 99999.f;
+
+	TextItem::TextItem(const TextItem& other)
+	{
+		// Copy the data pointer and its length from the source object.
+		graphics = other.graphics;
+		text = other.text;
+		textColor = other.textColor;
+		bgColor = other.bgColor;
+		bbox = other.bbox;
+
+		RecreateTextLayout(D2D1_SIZE_F{ Width(other.bbox), VeryLargeHeight }, graphics);
+	}
+
 	void TextItem::RecreateTextLayout(const SizeF &size, GraphicsContext &graphics)
 	{
 		SafeRelease(&textLayout);
@@ -39,7 +53,6 @@ namespace gui {
 	}
 
 
-	static const float VeryLargeHeight = 99999.f;
 
 	VTextList::VTextList(const GraphicsContext &graphics, float width, VTEXTLIST_DRAW_ORDER drawOrder)
 		: m_graphics(graphics)
@@ -75,32 +88,35 @@ namespace gui {
 		const D2D1_COLOR_F &bgColor)
 	{
 		TextItem item;
+		item.graphics = m_graphics;
 		item.text = text;
 		item.textColor = textColor;
 		item.bgColor = bgColor;
 		item.RecreateTextLayout(D2D1_SIZE_F{ m_width, VeryLargeHeight }, m_graphics);
 		item.UpdateBoundingBox({ 0.f, GetHeight() });
 
-		m_items.push_back(item);
+		m_items.push_back(std::move(item));
 	}
 
-	void VTextList::PopFront(size_t n)
+	size_t VTextList::PopFront(size_t n)
 	{
-		for (size_t i = 0; i < n && !m_items.empty(); i++) {
+		size_t i = 0;
+		for (; i < n && !m_items.empty(); i++) {
 			m_items.pop_front();
 		}
+		return i;
 	}
 
 	void VTextList::RecreateAllItems()
 	{
 		auto y = 0.f;
 
-		for (auto &item : m_items) {
-			item.RecreateTextLayout(D2D1_SIZE_F{ m_width, VeryLargeHeight }, m_graphics);
+		for (auto it = m_items.rbegin(); it != m_items.rend(); it++) {
+			it->RecreateTextLayout(D2D1_SIZE_F{ m_width, VeryLargeHeight }, m_graphics);
 
-			item.UpdateBoundingBox({ 0.f, y });
+			it->UpdateBoundingBox({ 0.f, y });
 
-			y += Height(item.bbox);
+			y += Height(it->bbox);
 		}
 	}
 
@@ -108,10 +124,10 @@ namespace gui {
 	{
 		auto y = 0.f;
 
-		for (auto &item : m_items) {
-			item.UpdateBoundingBox({ 0.f, y });
+		for (auto it = m_items.rbegin(); it != m_items.rend(); it++) {
+			it->UpdateBoundingBox({ 0.f, y });
 
-			y += Height(item.bbox);
+			y += Height(it->bbox);
 		}
 	}
 
@@ -122,11 +138,14 @@ namespace gui {
 	{
 		ren.SaveBrushColor();
 
-		for (const auto &item : m_items) {
+		for (auto it = m_items.crbegin(); it != m_items.crend(); it++) {
+			const auto &item = *it;
+
 			// Draw the background rectangle.
 			ren.solidBrush->SetColor(item.bgColor);
-			auto bgRect = RectF_FromPointAndSize(pos + TopLeft(item.bbox), Size(item.bbox));
-			ren.renderTarget->FillRectangle(bgRect, ren.solidBrush);
+			auto p = pos + TopLeft(item.bbox);
+			auto size = SizeF{ GetWidth(), Height(item.bbox) };
+			ren.renderTarget->FillRectangle(RectF_FromPointAndSize(p, size), ren.solidBrush);
 
 			// Draw the text.
 			ren.solidBrush->SetColor(item.textColor);

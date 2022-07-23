@@ -73,7 +73,6 @@ Console::Console(
 	, m_promptStr(promptStr)
 	, m_graphics(graphics)
 	, m_rect(rect)
-	, m_oldItemsList(graphics, Width(rect))
 {
 	UpdateAllItems();
 }
@@ -81,6 +80,10 @@ Console::Console(
 Console::~Console()
 {
 	SafeRelease(&m_cmdlineItem.textLayout);
+
+	for (auto &item : m_oldItems) {
+		SafeRelease(&item.textLayout);
+	}
 }
 
 void Console::SetRectangle(const RectF &r)
@@ -110,7 +113,7 @@ bool Console::HandleChar(wchar_t c)
 
 	auto bboxChanged = UpdateCmdlineItem();
 	if (bboxChanged) {
-		//UpdateOldItems();
+		UpdateOldItems();
 	}
 	return true;// redraw
 }
@@ -130,7 +133,7 @@ bool Console::HandleKey(Key key)
 		default: {
 			auto bboxChanged = UpdateCmdlineItem();
 			if (bboxChanged) {
-				//UpdateOldItems();
+				UpdateOldItems();
 			}
 		}break;
 	}
@@ -140,52 +143,44 @@ bool Console::HandleKey(Key key)
 
 void Console::PostProcessReturnKey()
 {
-	// Push the command line that has just got processed.
-	m_oldItemsList.PushBack(m_promptStr + m_console.last_cmdline());
+	PushItem_LatestCmdline();	
+	PushItem_LatestOutput();
 
-	// Push the output that was generated.
-	m_oldItemsList.PushBack(m_console.get_output(0));// 0 means "the most recent output".
-	
 	UpdateAllItems();
 
-	// Remove at most 2 text items.
-	RemoveOldItemsIfTooMany(2);
+	RemoveOldItemsIfTooMany(2);// remove at most 2
+}
+
+void Console::PushItem_LatestCmdline()
+{
+	ConsoleItem	item;
+	item.text = m_promptStr + m_console.last_cmdline();
+	m_oldItems.push_front(item);
+}
+
+void Console::PushItem_LatestOutput()
+{
+	ConsoleItem	item;
+	item.text = m_console.get_output(0);// 0 means "the most recent output".
+	m_oldItems.push_front(item);
 }
 
 void Console::RemoveOldItemsIfTooMany(size_t n)
 {
-	bool tooMany = m_oldItemsList.NumItems() > m_console.output_capacity();
+	bool tooMany = m_numUpdatedOldItems > m_console.output_capacity();
 	if (!tooMany) {
 		return;
 	}
 
-	auto numRemoved = m_oldItemsList.PopFront(n);
+	for (size_t i = 0; !m_oldItems.empty() && i < n; i++) {
+		m_oldItems.pop_back();
+	}
 
 	#ifdef _DEBUG
-	OutputDebugStringA(std::to_string(numRemoved).c_str());
-	OutputDebugStringA(" items got removed.\n");
+	OutputDebugStringA("Removing two old items.\n");
 	#endif
 }
 
-
-//			Layout
-//
-
-Point2dF Console::GetOutputAreaPosition() const
-{
-	auto x = 0.f;
-	auto y = Height(m_cmdlineItem.bbox);
-
-	return { x,y };
-}
-
-SizeF Console::GetOutputAreaSize() const
-{
-	auto w = Width(m_rect);
-	auto h = Height(m_rect) - Height(m_cmdlineItem.bbox);
-
-	return { w,h };
-}
 
 
 //					ITEM UPDATE
@@ -196,7 +191,7 @@ void Console::UpdateAllItems()
 	// IMPORTANT NOTE
 	//	Always call UpdateCmdlineItem BEFORE UpdateOldItems.
 	UpdateCmdlineItem();
-	//UpdateOldItems();
+	UpdateOldItems();
 }
 
 bool Console::UpdateCmdlineItem()
@@ -216,6 +211,38 @@ bool Console::UpdateCmdlineItem()
 
 	auto bboxChanged = oldHeight != Height(m_cmdlineItem.bbox);
 	return bboxChanged;
+}
+
+void Console::UpdateOldItems()
+{
+	HRESULT hr = S_OK;
+
+	// A counter for how many items have been updated and hence must be rendered.
+	m_numUpdatedOldItems = 0;
+
+	// Compute the destination rectangle for the old items
+	// located below the command line rectangle.
+	// This rectangle will be shrinked in the loop below each time an item is updated.
+	auto dest = m_rect;
+	dest.top += Height(m_cmdlineItem.bbox);
+
+	// Note: the item's text does not need to be updated.
+	for (auto &item : m_oldItems) {
+		// Stop if no more room for the current item.
+		if (dest.top >= dest.bottom) {
+			break;
+		}
+
+		item.RecreateTextLayout(Size(dest), m_graphics);
+
+		item.UpdateBoundingBox(TopLeft(dest));
+
+		++m_numUpdatedOldItems;
+
+		// This is where we shrink the destination rectangle.
+		// Compute the position of the next item positioned below.
+		dest.top += Height(item.bbox) + 4;
+	}
 }
 
 //					DRAWING
@@ -298,16 +325,27 @@ void Console::DrawOldItems(Renderer &ren)
 
 	ren.SaveBrushColor();
 
-	//// We will alternate between two colors when rendering the items.
-	//auto colors = ColorSwitcher({
-	//	//ColorFrom3i(0, 200, 0),
-	//	ColorFrom3i(255, 130, 36),
-	//	ColorFrom3i(230, 230, 230)
-	//});
+	// We will alternate between two colors when rendering the items.
+	auto colors = ColorSwitcher({
+		//ColorFrom3i(0, 200, 0),
+		ColorFrom3i(255, 130, 36),
+		ColorFrom3i(230, 230, 230)
+	});
 
-	auto view = RectF_FromPointAndSize({ 0.f,0.f }, GetOutputAreaSize());
-	auto p = GetPosition() + GetOutputAreaPosition();
-	m_oldItemsList.DrawView(view, p, ren);
+	// Draw each updated item's text layout.
+	for (size_t i = 0; i < m_numUpdatedOldItems; i++) {
+		assert(i < m_oldItems.size());
+
+		ren.solidBrush->SetColor(colors.Next());
+
+		const auto &item = m_oldItems[i];
+		ren.renderTarget->DrawTextLayout(TopLeft(item.bbox), item.textLayout, ren.solidBrush);
+	}
 
 	ren.RestoreBrushColor();
+
+#ifdef _DEBUG
+	OutputDebugStringA(std::to_string(m_numUpdatedOldItems).c_str());
+	OutputDebugStringA("\n");
+#endif
 }

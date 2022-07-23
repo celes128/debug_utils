@@ -10,6 +10,8 @@
 namespace gui {
 
 	struct TextItem {
+		GraphicsContext		graphics;
+
 		// The raw string that is layed out in the layout below.
 		std::wstring		text;
 
@@ -22,6 +24,34 @@ namespace gui {
 		// Coordinates of the (smallest) bounding box containing the text.
 		// TopLeft(bbox) gives the position of the box on the window.
 		RectF				bbox;
+
+		TextItem() = default;
+		TextItem(const TextItem& other);
+		
+		TextItem& operator=(const TextItem& other) = delete;
+
+		// Move assignment operator.
+		TextItem& operator=(TextItem&& other) noexcept
+		{
+			if (this != &other) {
+				// Free the existing resource.
+				SafeRelease(&textLayout);
+
+				// Copy the data pointer and its length from the source object.
+				graphics = other.graphics;
+				text = other.text;
+				textColor = other.textColor;
+				bgColor = other.bgColor;
+				textLayout = other.textLayout;
+				bbox = other.bbox;
+
+				// Release the data pointer from the source object so that
+				// the destructor does not free the memory multiple times.
+				other.textLayout = nullptr;
+			}
+
+			return *this;
+		}
 
 		~TextItem()
 		{
@@ -69,6 +99,8 @@ namespace gui {
 		float GetHeight() const;
 		D2D1_SIZE_F GetSize() const { return { GetWidth(), GetHeight() }; }
 
+		size_t NumItems() const { return m_items.size(); }
+
 		//				MANIPULATORS
 		//
 
@@ -81,7 +113,9 @@ namespace gui {
 			const D2D1_COLOR_F &bgColor = D2D1::ColorF(D2D1::ColorF::Black));
 
 		// PopFront removes n items from the front of the list.
-		void PopFront(size_t n = 1);
+		// RETURN VALUE
+		//	Returns the number of items removed.
+		size_t PopFront(size_t n = 1);
 
 		//// Iterators.
 		//auto begin() const { return m_items.cbegin(); }
@@ -103,6 +137,5 @@ namespace gui {
 		VTEXTLIST_DRAW_ORDER	m_drawOrder{ VTEXTLIST_DRAW_ORDER_TOP_TO_BOTTOM };
 
 		std::deque<TextItem>	m_items;
-
 	};
 }

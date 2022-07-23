@@ -110,8 +110,7 @@ private:
 
 	void DrawBackground(Renderer &ren);
 	void DrawCmdline(Renderer &ren);
-		void DrawCmdlineString(Renderer &ren, const D2D1_COLOR_F &color);
-		void DrawCmdlineCaret(Renderer &ren, ID2D1SolidColorBrush &brush);
+	void DrawCmdlineString(Renderer &ren, const D2D1_COLOR_F &color);
 	void DrawCaret(Renderer &ren);
 	void DrawOldItems(Renderer &ren);
 

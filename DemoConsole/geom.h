@@ -7,6 +7,14 @@ using Point2dF	= D2D1_POINT_2F;
 using SizeF		= D2D1_SIZE_F;
 using RectF		= D2D1_RECT_F;
 
+inline Point2dF operator+(const Point2dF &left, const Point2dF &right)
+{
+	return {
+		left.x + right.x,
+		left.y + right.y
+	};
+}
+
 //			Rectangle construction
 //
 inline RectF	RectF_Null() { return RectF{ 0.F,0.F,0.F,0.F }; }

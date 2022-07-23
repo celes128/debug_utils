@@ -48,16 +48,21 @@ std::wstring CommandListCommands::execute(const dbgutils::CmdArgs &args)
 		return L"";
 	}
 
+	const auto &commands = m_interpreter->GetCommands();
 	std::wstring out;
 
-	for (const auto &cmd : m_interpreter->GetCommands()) {
+	for (size_t i = 0; i < commands.size(); i++) {
+		const auto &cmd = commands[i];
+
 		out += cmd->Name();
 
 		if (cmd->Alias().length() >= 1) {
 			out += L" @" + cmd->Alias();
 		}
 
-		out += L"\n";
+		if (i + 1 < commands.size()) {
+			out += L"\n";
+		}
 	}
 
 	return out;

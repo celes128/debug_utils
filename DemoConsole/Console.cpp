@@ -60,7 +60,7 @@ private:
 
 
 
-//					class Console
+//		class:				Console
 //
 
 Console::Console(
@@ -260,8 +260,8 @@ void Console::DrawBackground(Renderer &ren)
 {
 	ren.SaveBrushColor();
 
-	//ren.solidBrush->SetColor(ColorFrom3i(0, 20, 80));
-	ren.solidBrush->SetColor(ColorFrom3i(23, 67, 135));
+	ren.solidBrush->SetColor(ColorFrom3i(0, 20, 80));
+	//ren.solidBrush->SetColor(ColorFrom3i(23, 67, 135));
 	ren.renderTarget->FillRectangle(m_rect, ren.solidBrush);
 	
 	ren.RestoreBrushColor();
@@ -327,7 +327,8 @@ void Console::DrawOldItems(Renderer &ren)
 
 	// We will alternate between two colors when rendering the items.
 	auto colors = ColorSwitcher({
-		ColorFrom3i(0, 200, 0),
+		//ColorFrom3i(0, 200, 0),
+		ColorFrom3i(255, 130, 36),
 		ColorFrom3i(230, 230, 230)
 	});
 

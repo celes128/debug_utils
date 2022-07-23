@@ -12,10 +12,10 @@ namespace dbgutils {
 
 		std::wstring output;
 
-		for (const auto &cmd : m_cmds) {
+		for (auto &cmd : m_cmds) {
 			std::wstring cmdNames[] = { cmd->Alias(), cmd->Name() };
 			for (const auto &name : cmdNames) {
-				auto ok = try_cmd(name, input, &output);
+				auto ok = try_cmd(cmd, name, input, &output);
 				if (ok) {// Success!
 					return output;
 				}
@@ -26,7 +26,7 @@ namespace dbgutils {
 		return L"Unknown command";
 	}
 
-	bool Interpreter::try_cmd(const std::wstring cmdName, const std::wstring &input, std::wstring *output)
+	bool Interpreter::try_cmd(std::shared_ptr<ICommand> cmd, const std::wstring cmdName, const std::wstring &input, std::wstring *output)
 	{
 		assert(output != nullptr);
 
@@ -34,15 +34,21 @@ namespace dbgutils {
 			return false;
 		}
 
+		// Look for the command name in the input string.
 		size_t i;
 		auto found = wstr_find_substr(input, cmdName, 0, &i);
 		if (!found) {
 			return false;
 		}
 
-		// Return the end of the input starting right after the command name.
-		*output = input.substr(i + cmdName.length());
-		wstr_ltrim(*output);
+		// Compute the command arguments.
+		auto rest = input.substr(i + cmdName.length());
+		wstr_ltrim(rest);
+		auto args = wstr_split(rest);
+
+		// Execute it!
+		*output = cmd->execute(args);
+
 		return true;
 	}
 }

@@ -260,7 +260,8 @@ void Console::DrawBackground(Renderer &ren)
 {
 	ren.SaveBrushColor();
 
-	ren.solidBrush->SetColor(ColorFrom3i(0, 20, 80));
+	//ren.solidBrush->SetColor(ColorFrom3i(0, 20, 80));
+	ren.solidBrush->SetColor(ColorFrom3i(23, 67, 135));
 	ren.renderTarget->FillRectangle(m_rect, ren.solidBrush);
 	
 	ren.RestoreBrushColor();

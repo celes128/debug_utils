@@ -39,6 +39,8 @@ namespace dbgutils {
 		// cmdline returns the string in the command line.
 		const std::wstring &cmdline() const;
 
+		auto *get_interpreter() { return &m_interpreter; }
+
 		// TEMPORARY
 		// last_cmdline returns the last commandline string that was executed.
 		// If there is none then the empty string is returned.

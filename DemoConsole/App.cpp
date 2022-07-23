@@ -26,6 +26,43 @@ public:
 	}
 };
 
+// A command that lists all the console commands installed in the interpreter.
+class CommandListCommands : public dbgutils::ICommand {
+public:
+	CommandListCommands(const dbgutils::Interpreter *interpreter = nullptr)
+		: dbgutils::ICommand(L"listcmds", L"lc")
+		, m_interpreter(interpreter)
+	{}
+
+	~CommandListCommands() = default;
+
+	std::wstring execute(const dbgutils::CmdArgs &args) override;
+
+private:
+	const dbgutils::Interpreter *m_interpreter;
+};
+
+std::wstring CommandListCommands::execute(const dbgutils::CmdArgs &args)
+{
+	if (!m_interpreter) {
+		return L"";
+	}
+
+	std::wstring out;
+
+	for (const auto &cmd : m_interpreter->GetCommands()) {
+		out += cmd->Name();
+
+		if (cmd->Alias().length() >= 1) {
+			out += L" @" + cmd->Alias();
+		}
+
+		out += L"\n";
+	}
+
+	return out;
+}
+
 
 //					Entry point
 //
@@ -63,7 +100,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /
 //const WCHAR kFontName[] = L"Andale Mono";
 
 const WCHAR *App::kFontName		= L"Consolas";
-const float App::kFontSize		= 28.f;
+const float App::kFontSize		= 22.f;
 
 App::App()
 	: m_hwnd(NULL)
@@ -248,12 +285,14 @@ void App::DiscardDeviceResources()
 void App::CreateTheConsole()
 {
 	// Create an interpreter.
-	dbgutils::CmdList commands{ {std::make_shared<CommandEcho>()} };
+	dbgutils::CmdList commands{
+		std::make_shared<CommandEcho>()
+	};
 	dbgutils::Interpreter interp(commands);
 	
 	// Position rectangle.
-	auto w = WindowSizeF().width * 0.75f;
-	auto h = WindowSizeF().height * 0.75f;
+	auto w = WindowSizeF().width * 0.9f;
+	auto h = WindowSizeF().height * 0.9f;
 	auto x = (WindowSizeF().width - w) / 2.f;
 	auto y = (WindowSizeF().height - h) / 2.f;
 	auto r = RectF_FromPointAndSize({ x,y }, { w,h });
@@ -265,6 +304,10 @@ void App::CreateTheConsole()
 		r,
 		GetGraphicsContext()
 	);
+
+	// Add a CommandListCommands command to the interpreter.
+	auto *interpreter = m_console->GetInterpreter();
+	interpreter->InstallCommand(std::make_shared<CommandListCommands>(interpreter));
 }
 
 

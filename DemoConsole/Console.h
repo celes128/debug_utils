@@ -43,6 +43,11 @@ public:
 	);
 	~Console();
 	
+	//			ACCESSORS
+	//
+
+	auto * GetInterpreter() { return m_console.get_interpreter(); }
+
 	//			MANIPULATORS
 	//
 

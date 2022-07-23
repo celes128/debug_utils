@@ -43,15 +43,28 @@ namespace dbgutils {
 			: m_cmds(cmds)
 		{}
 
+		//		ACCESSORS
+		//
+		
+		const auto &GetCommands() const { return m_cmds; }
+
+
 		//		MANIPULATORS
 		//
+		
+		void InstallCommand(const std::shared_ptr<dbgutils::ICommand> &cmd)
+		{
+			m_cmds.push_back(cmd);
+		}
+
 		std::wstring execute(const std::wstring &input);
+
 
 	private:
 		// try_cmd attempts to execute the command if its name matches the first token in the input.
 		// RETURN VALUE
 		//	Returns true iff the command name matched the first token of the input.
-		bool try_cmd(const std::wstring cmdName, const std::wstring &input, std::wstring *output);
+		bool try_cmd(std::shared_ptr<ICommand> cmd, const std::wstring cmdName, const std::wstring &input, std::wstring *output);
 
 	private:
 		CmdList		m_cmds;

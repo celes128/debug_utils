@@ -141,10 +141,16 @@ bool Console::HandleKey(Key key)
 void Console::PostProcessReturnKey()
 {
 	// Push the command line that has just got processed.
-	m_oldItemsList.PushBack(m_promptStr + m_console.last_cmdline());
+	m_oldItemsList.PushBack(
+		m_promptStr + m_console.last_cmdline(),
+		D2D1::ColorF(D2D1::ColorF::Green),
+		D2D1::ColorF(D2D1::ColorF::Black));
 
 	// Push the output that was generated.
-	m_oldItemsList.PushBack(m_console.get_output(0));// 0 means "the most recent output".
+	m_oldItemsList.PushBack(
+		m_console.get_output(0),// 0 means "the most recent output"
+		D2D1::ColorF(D2D1::ColorF::Black),
+		D2D1::ColorF(D2D1::ColorF::White));
 	
 	UpdateAllItems();
 

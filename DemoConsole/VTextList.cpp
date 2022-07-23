@@ -93,9 +93,11 @@ namespace gui {
 		item.textColor = textColor;
 		item.bgColor = bgColor;
 		item.RecreateTextLayout(D2D1_SIZE_F{ m_width, VeryLargeHeight }, m_graphics);
-		item.UpdateBoundingBox({ 0.f, GetHeight() });
+		item.UpdateBoundingBox({ 0.f, GetHeight() });// dummy position
 
 		m_items.push_back(std::move(item));
+
+		UpdateAllItemsPositions();
 	}
 
 	size_t VTextList::PopFront(size_t n)
@@ -112,6 +114,7 @@ namespace gui {
 		auto y = 0.f;
 
 		for (auto it = m_items.rbegin(); it != m_items.rend(); it++) {
+		//for (auto it = m_items.begin(); it != m_items.end(); it++) {
 			it->RecreateTextLayout(D2D1_SIZE_F{ m_width, VeryLargeHeight }, m_graphics);
 
 			it->UpdateBoundingBox({ 0.f, y });
@@ -125,6 +128,7 @@ namespace gui {
 		auto y = 0.f;
 
 		for (auto it = m_items.rbegin(); it != m_items.rend(); it++) {
+		//for (auto it = m_items.begin(); it != m_items.end(); it++) {
 			it->UpdateBoundingBox({ 0.f, y });
 
 			y += Height(it->bbox);

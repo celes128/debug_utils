@@ -35,12 +35,12 @@ private:
 	//		Console
 	void CreateTheConsole();
 
-	// RETURN VALUE
-	// Returns true iff the height of the command line changed, meaning we should
-	// call UpdateOldItems.
-	bool UpdateCmdlineItem();
+	//// RETURN VALUE
+	//// Returns true iff the height of the command line changed, meaning we should
+	//// call UpdateOldItems.
+	//bool UpdateCmdlineItem();
 
-	void UpdateOldItems();
+	//void UpdateOldItems();
 
 
 	//		Rendering

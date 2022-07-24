@@ -1,5 +1,6 @@
 #include "Console.h"
 #include "utils.h"
+#include <stdexcept>
 
 //							HELPER FUNCTIONS AND CLASSES
 //
@@ -66,6 +67,7 @@ private:
 Console::Console(
 	dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa,
 	const RectF &rect,
+	ID2D1HwndRenderTarget *renderTarget,
 	const GraphicsContext &graphics,
 	const wchar_t *promptStr
 )
@@ -75,12 +77,58 @@ Console::Console(
 	, m_rect(rect)
 	, m_oldItemsList(graphics, Width(rect))
 {
+	assert(renderTarget != nullptr);
+
+	HRESULT hr = S_OK;
+	
+	hr = CreateRenderTarget(renderTarget);
+	if (FAILED(hr)) {
+		throw std::runtime_error("Console::Console(...) failed to create its render target.");
+	}
+
+	hr = CreateBrush();
+	if (FAILED(hr)) {
+		throw std::runtime_error("Console::Console(...) failed to create its brush.");
+	}
+
 	UpdateAllItems();
+}
+
+HRESULT Console::CreateRenderTarget(IN ID2D1HwndRenderTarget *renderTarget)
+{
+	assert(renderTarget != nullptr);
+
+	auto size = D2D1_SIZE_U{ (UINT32)Width(m_rect), (UINT32)Height(m_rect) };
+	auto pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN);
+
+	auto hr = renderTarget->CreateCompatibleRenderTarget(
+		NULL,
+		&size,
+		&pixelFormat,
+		D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
+		&m_renderTarget);
+
+	return hr;
+}
+
+HRESULT Console::CreateBrush()
+{
+	assert(m_renderTarget != nullptr);
+
+	HRESULT hr = S_OK;
+
+	hr = m_renderTarget->CreateSolidColorBrush(
+		D2D1::ColorF(D2D1::ColorF::Red),
+		&m_solidBrush);
+
+	return hr;
 }
 
 Console::~Console()
 {
 	SafeRelease(&m_cmdlineItem.textLayout);
+	SafeRelease(&m_solidBrush);
+	SafeRelease(&m_renderTarget);
 }
 
 void Console::SetRectangle(const RectF &r)
@@ -143,7 +191,7 @@ void Console::PostProcessReturnKey()
 	// Push the command line that has just got processed.
 	m_oldItemsList.PushBack(
 		m_promptStr + m_console.last_cmdline(),
-		D2D1::ColorF(D2D1::ColorF::Green),
+		ColorFrom3i(255, 130, 36),
 		D2D1::ColorF(D2D1::ColorF::Black));
 
 	// Push the output that was generated.
@@ -154,7 +202,7 @@ void Console::PostProcessReturnKey()
 	
 	UpdateAllItems();
 
-	// Remove at most 2 text items.
+	// Remove at most 2 items.
 	RemoveOldItemsIfTooMany(2);
 }
 
@@ -218,7 +266,7 @@ bool Console::UpdateCmdlineItem()
 
 	m_cmdlineItem.RecreateTextLayout(Size(m_rect), m_graphics);
 
-	m_cmdlineItem.UpdateBoundingBox(TopLeft(m_rect));
+	m_cmdlineItem.UpdateBoundingBox(Point2dF_Zero());
 
 	auto bboxChanged = oldHeight != Height(m_cmdlineItem.bbox);
 	return bboxChanged;
@@ -230,32 +278,93 @@ bool Console::UpdateCmdlineItem()
 
 void Console::Draw(Renderer &ren)
 {
-	DrawBackground(ren);
-	DrawCmdline(ren);
-	DrawOldItems(ren);
+	DrawOnMyRenderTarget();
+	CopyMyRenderTargetToClient(ren);
 }
 
-void Console::DrawBackground(Renderer &ren)
+void Console::DrawOnMyRenderTarget()
 {
+	// Initialize rendering.
+	m_renderTarget->BeginDraw();
+	m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
+	m_renderTarget->Clear(ColorFrom3i(0, 0, 0));
+
+	// Draw each element of the console here...
+	DrawBackground();
+	DrawCmdline();
+	DrawOldItems();
+
+	// Finalize rendering.
+	auto hr = m_renderTarget->EndDraw();
+	if (hr == D2DERR_RECREATE_TARGET) {
+		assert(false && "Error handling not yet implemented.");
+	}
+}
+
+void Console::CopyMyRenderTargetToClient(Renderer &ren)
+{
+	ID2D1Bitmap *sourceBitmap = nullptr;
+	m_renderTarget->GetBitmap(&sourceBitmap);
+
+	ren.renderTarget->DrawBitmap(
+		sourceBitmap,
+		m_rect,
+		1.f,
+		D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
+}
+
+Renderer Console::GetRenderer()
+{
+	return Renderer{
+		m_renderTarget,
+		m_solidBrush
+	};
+}
+
+void Console::DrawBackground()
+{
+	auto ren = GetRenderer();
+
 	ren.SaveBrushColor();
 
 	ren.solidBrush->SetColor(ColorFrom3i(0, 20, 80));
 	//ren.solidBrush->SetColor(ColorFrom3i(23, 67, 135));
-	ren.renderTarget->FillRectangle(m_rect, ren.solidBrush);
+
+	auto rect = RectF_FromPointAndSize(Point2dF_Zero(), Size(m_rect));
+
+	ren.renderTarget->FillRectangle(rect, ren.solidBrush);
 	
 	ren.RestoreBrushColor();
 }
 
-void Console::DrawCmdline(Renderer &ren)
+void Console::DrawCmdline()
 {
 	auto color = ColorFrom3i(230, 230, 230);
 
-	DrawCmdlineString(ren, color);
-	DrawCaret(ren);
+	DrawCmdlineRect();
+	DrawCmdlineString(color);
+	DrawCaret();
 }
 
-void Console::DrawCmdlineString(Renderer &ren, const D2D1_COLOR_F &color)
+void Console::DrawCmdlineRect()
 {
+	auto ren = GetRenderer();
+
+
+	auto size = SizeF{ Width(m_rect), Height(m_cmdlineItem.bbox) };
+	auto rect = RectF_FromPointAndSize(Point2dF_Zero(), size);
+
+	ren.solidBrush->SetColor(D2D1::ColorF(D2D1::ColorF::Black));
+	ren.renderTarget->FillRectangle(rect, ren.solidBrush);
+
+	ren.solidBrush->SetColor(D2D1::ColorF(D2D1::ColorF::Green));
+	ren.renderTarget->DrawRectangle(rect, ren.solidBrush, 4.f);
+}
+
+void Console::DrawCmdlineString(const D2D1_COLOR_F &color)
+{
+	auto ren = GetRenderer();
+	
 	ren.SaveBrushColor();
 	ren.solidBrush->SetColor(ColorFrom3i(230, 230, 230));
 
@@ -264,8 +373,10 @@ void Console::DrawCmdlineString(Renderer &ren, const D2D1_COLOR_F &color)
 	ren.RestoreBrushColor();
 }
 
-void Console::DrawCaret(Renderer &ren)
+void Console::DrawCaret()
 {
+	auto ren = GetRenderer();
+	
 	ren.SaveBrushColor();
 	ren.solidBrush->SetColor(ColorFrom3i(230, 230, 230));
 
@@ -298,11 +409,9 @@ void Console::DrawCaret(Renderer &ren)
 	ren.RestoreBrushColor();
 }
 
-void Console::DrawOldItems(Renderer &ren)
+void Console::DrawOldItems()
 {
 	HRESULT hr = S_OK;
-
-	ren.SaveBrushColor();
 
 	//// We will alternate between two colors when rendering the items.
 	//auto colors = ColorSwitcher({
@@ -312,8 +421,6 @@ void Console::DrawOldItems(Renderer &ren)
 	//});
 
 	auto view = RectF_FromPointAndSize({ 0.f,0.f }, GetOutputAreaSize());
-	auto p = GetPosition() + GetOutputAreaPosition();
-	m_oldItemsList.DrawView(view, p, ren);
-
-	ren.RestoreBrushColor();
+	auto p = GetOutputAreaPosition();
+	m_oldItemsList.DrawView(view, p, GetRenderer());
 }

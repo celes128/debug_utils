@@ -3,7 +3,7 @@
 #include "framework.h"
 
 struct Renderer {
-	ID2D1HwndRenderTarget	*renderTarget{ nullptr };
+	ID2D1RenderTarget		*renderTarget{ nullptr };
 	ID2D1SolidColorBrush	*solidBrush{ nullptr };
 	D2D1_COLOR_F			savedBrushColor{ 0 };
 

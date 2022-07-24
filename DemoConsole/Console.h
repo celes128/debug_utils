@@ -39,6 +39,7 @@ public:
 	Console(
 		dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa,
 		const RectF &rect,
+		ID2D1HwndRenderTarget *renderTarget,
 		const GraphicsContext &graphics,
 		const wchar_t *promptStr = L"> "
 	);
@@ -69,6 +70,12 @@ public:
 	void Draw(Renderer &ren);
 
 private:
+	//			Construction
+	//
+
+	HRESULT CreateRenderTarget(IN ID2D1HwndRenderTarget *renderTarget);
+	HRESULT CreateBrush();
+
 	//			Input handling
 	//
 	
@@ -116,17 +123,26 @@ private:
 	//			Drawing
 	//
 
-	void DrawBackground(Renderer &ren);
-	void DrawCmdline(Renderer &ren);
-	void DrawCmdlineString(Renderer &ren, const D2D1_COLOR_F &color);
-	void DrawCaret(Renderer &ren);
-	void DrawOldItems(Renderer &ren);
+	Renderer GetRenderer();
+	void DrawBackground();
+	void DrawCmdline();
+	void DrawCmdlineRect();
+	void DrawCmdlineString(const D2D1_COLOR_F &color);
+	void DrawCaret();
+	void DrawOldItems();
+
+	void DrawOnMyRenderTarget();
+	// CopyMyRenderTargetToClient copies the console's render target content into the client's render target.
+	void CopyMyRenderTargetToClient(Renderer &ren);
 
 private:
 	// Logic
 	dbgutils::Console			m_console;
 	
 	// Layout + Graphics
+	ID2D1BitmapRenderTarget		*m_renderTarget{ nullptr };
+	ID2D1SolidColorBrush		*m_solidBrush{ nullptr };
+
 	std::wstring		m_promptStr;
 	GraphicsContext		m_graphics;
 	RectF				m_rect;

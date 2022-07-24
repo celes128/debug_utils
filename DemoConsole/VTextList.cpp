@@ -54,10 +54,9 @@ namespace gui {
 
 
 
-	VTextList::VTextList(const GraphicsContext &graphics, float width, VTEXTLIST_DRAW_ORDER drawOrder)
+	VTextList::VTextList(const GraphicsContext &graphics, float width)
 		: m_graphics(graphics)
 		, m_width(width)
-		, m_drawOrder(drawOrder)
 	{
 		assert(width >= 1.f);
 	}
@@ -138,7 +137,7 @@ namespace gui {
 	void VTextList::DrawView(
 		const RectF &view,
 		const Point2dF &pos,
-		Renderer &ren)
+		Renderer ren)
 	{
 		ren.SaveBrushColor();
 
@@ -146,10 +145,12 @@ namespace gui {
 			const auto &item = *it;
 
 			// Draw the background rectangle.
-			ren.solidBrush->SetColor(item.bgColor);
 			auto p = pos + TopLeft(item.bbox);
 			auto size = SizeF{ GetWidth(), Height(item.bbox) };
-			ren.renderTarget->FillRectangle(RectF_FromPointAndSize(p, size), ren.solidBrush);
+			auto rect = RectF_FromPointAndSize(p, size);
+
+			ren.solidBrush->SetColor(item.bgColor);
+			ren.renderTarget->FillRectangle(rect, ren.solidBrush);
 
 			// Draw the text.
 			ren.solidBrush->SetColor(item.textColor);

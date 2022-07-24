@@ -7,6 +7,11 @@ using Point2dF	= D2D1_POINT_2F;
 using SizeF		= D2D1_SIZE_F;
 using RectF		= D2D1_RECT_F;
 
+inline Point2dF Point2dF_Zero()
+{
+	return { 0.f,0.f };
+}
+
 inline Point2dF operator+(const Point2dF &left, const Point2dF &right)
 {
 	return {

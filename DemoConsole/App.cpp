@@ -6,67 +6,11 @@
 #include <locale>
 
 #include "utils.h"
+#include "commands.h"
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "debug_utils.lib")
-
-// A dummy command that prints its arguments.
-class CommandEcho : public dbgutils::ICommand {
-public:
-	CommandEcho()
-		: dbgutils::ICommand(L"echo")
-	{}
-
-	~CommandEcho() = default;
-
-	std::wstring execute(const dbgutils::CmdArgs &args) override
-	{
-		return wstr_concat(args, L" ");
-	}
-};
-
-// A command that lists all the console commands installed in the interpreter.
-class CommandListCommands : public dbgutils::ICommand {
-public:
-	CommandListCommands(const dbgutils::Interpreter *interpreter = nullptr)
-		: dbgutils::ICommand(L"listcmds", L"lc")
-		, m_interpreter(interpreter)
-	{}
-
-	~CommandListCommands() = default;
-
-	std::wstring execute(const dbgutils::CmdArgs &args) override;
-
-private:
-	const dbgutils::Interpreter *m_interpreter;
-};
-
-std::wstring CommandListCommands::execute(const dbgutils::CmdArgs &args)
-{
-	if (!m_interpreter) {
-		return L"";
-	}
-
-	const auto &commands = m_interpreter->GetCommands();
-	std::wstring out;
-
-	for (size_t i = 0; i < commands.size(); i++) {
-		const auto &cmd = commands[i];
-
-		out += cmd->Name();
-
-		if (cmd->Alias().length() >= 1) {
-			out += L" @" + cmd->Alias();
-		}
-
-		if (i + 1 < commands.size()) {
-			out += L"\n";
-		}
-	}
-
-	return out;
-}
 
 
 //					Entry point
@@ -179,14 +123,19 @@ HRESULT App::Initialize()
 			HINST_THISCOMPONENT,
 			this
 		);
-
-		hr = m_hwnd ? S_OK : E_FAIL;
-		if (SUCCEEDED(hr)) {
-			CreateTheConsole();
-			
-			ShowWindow(m_hwnd, SW_SHOWNORMAL);
-			UpdateWindow(m_hwnd);
+		if (!m_hwnd) {
+			return E_FAIL;
 		}
+
+		hr = CreateDeviceResources();
+		if (FAILED(hr)) {
+			return hr;
+		}
+		
+		CreateTheConsole();
+
+		ShowWindow(m_hwnd, SW_SHOWNORMAL);
+		UpdateWindow(m_hwnd);
 	}
 
 	return hr;
@@ -291,7 +240,8 @@ void App::CreateTheConsole()
 {
 	// Create an interpreter.
 	dbgutils::CmdList commands{
-		std::make_shared<CommandEcho>()
+		std::make_shared<CommandEcho>(),
+		std::make_shared<CommandLoremIpsum>()
 	};
 	dbgutils::Interpreter interp(commands);
 	
@@ -307,6 +257,7 @@ void App::CreateTheConsole()
 		32,				// history capacity
 		32,				// output capacity
 		r,
+		m_pRenderTarget,
 		GetGraphicsContext()
 	);
 

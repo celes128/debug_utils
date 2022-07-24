@@ -77,20 +77,11 @@ namespace gui {
 	//	inside a virtual rectangle whose width is fixed and height changes
 	//	dynamically as items are added or removed.
 
-	enum VTEXTLIST_DRAW_ORDER {
-		// Draw the front item at the top of the render target and the back of the list towards the bottom.
-		VTEXTLIST_DRAW_ORDER_TOP_TO_BOTTOM,
-
-		// Draw the front item at the bottom of the render target and the back of the list towards the top.
-		VTEXTLIST_DRAW_ORDER_BOTTOM_TO_TOP
-	};
-
 	class VTextList {
 	public:
 		VTextList(
 			const GraphicsContext &graphics,
-			float width,
-			VTEXTLIST_DRAW_ORDER drawOrder = VTEXTLIST_DRAW_ORDER_TOP_TO_BOTTOM);
+			float width);
 
 		//				ACCESSORS
 		//
@@ -125,7 +116,7 @@ namespace gui {
 		void DrawView(
 			const RectF &view,
 			const Point2dF &pos,
-			Renderer &ren);
+			Renderer ren);
 
 	private:
 		void RecreateAllItems();
@@ -134,8 +125,6 @@ namespace gui {
 	private:
 		GraphicsContext			m_graphics;
 		float					m_width{ 0.f };
-		VTEXTLIST_DRAW_ORDER	m_drawOrder{ VTEXTLIST_DRAW_ORDER_TOP_TO_BOTTOM };
-
 		std::deque<TextItem>	m_items;
 	};
 }

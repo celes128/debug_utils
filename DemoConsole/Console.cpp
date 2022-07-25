@@ -1,6 +1,7 @@
 #include "Console.h"
 #include "utils.h"
 #include <stdexcept>
+#include <algorithm>
 
 //							HELPER FUNCTIONS AND CLASSES
 //
@@ -72,10 +73,11 @@ Console::Console(
 	const wchar_t *promptStr
 )
 	: m_console(interp, histCapa, outputCapa)
-	, m_promptStr(promptStr)
 	, m_graphics(graphics)
+	, m_promptStr(promptStr)
 	, m_rect(rect)
 	, m_oldItemsList(graphics, Width(rect))
+	, m_scroller(1.f, 1.f)// dummy values
 {
 	assert(renderTarget != nullptr);
 
@@ -92,6 +94,8 @@ Console::Console(
 	}
 
 	UpdateAllItems();
+
+	CreateScroller();
 }
 
 HRESULT Console::CreateRenderTarget(IN ID2D1HwndRenderTarget *renderTarget)
@@ -122,6 +126,13 @@ HRESULT Console::CreateBrush()
 		&m_solidBrush);
 
 	return hr;
+}
+
+void Console::CreateScroller()
+{
+	auto spaceLen = std::max(m_oldItemsList.GetHeight(), 1.f);// I can't use a space length of 0 for the scroller.
+	auto viewLen = GetOutputAreaSize().height;
+	m_scroller = gui::Scroller(spaceLen, viewLen);
 }
 
 Console::~Console()
@@ -204,6 +215,9 @@ void Console::PostProcessReturnKey()
 
 	// Remove at most 2 items.
 	RemoveOldItemsIfTooMany(2);
+
+	// Update the scroller space length.
+	m_scroller.SetSpaceLength(m_oldItemsList.GetHeight());
 }
 
 void Console::RemoveOldItemsIfTooMany(size_t n)
@@ -221,6 +235,22 @@ void Console::RemoveOldItemsIfTooMany(size_t n)
 	#endif
 }
 
+bool Console::HandleMouseWheel(int mvt)
+{
+	bool moved{ false };
+	if (mvt < 0) {
+		m_itemsViewY = m_scroller.ScrollDown(-1.f * mvt, &moved);
+	}
+	else {
+		m_itemsViewY = m_scroller.ScrollUp(1.f * mvt, &moved);
+	}
+
+	if (moved) {
+		//TODO: UpdateOutputAreaScrollBarPosition();
+	}
+	
+	return moved;
+}
 
 //			Layout
 //
@@ -247,10 +277,7 @@ SizeF Console::GetOutputAreaSize() const
 
 void Console::UpdateAllItems()
 {
-	// IMPORTANT NOTE
-	//	Always call UpdateCmdlineItem BEFORE UpdateOldItems.
 	UpdateCmdlineItem();
-	//UpdateOldItems();
 }
 
 bool Console::UpdateCmdlineItem()
@@ -290,9 +317,10 @@ void Console::DrawOnMyRenderTarget()
 	m_renderTarget->Clear(ColorFrom3i(0, 0, 0));
 
 	// Draw each element of the console here...
+	// IMPORTANT: Always call DrawOldItems() before DrawCmdLine().
 	DrawBackground();
-	DrawCmdline();
 	DrawOldItems();
+	DrawCmdline();
 
 	// Finalize rendering.
 	auto hr = m_renderTarget->EndDraw();
@@ -420,7 +448,7 @@ void Console::DrawOldItems()
 	//	ColorFrom3i(230, 230, 230)
 	//});
 
-	auto view = RectF_FromPointAndSize({ 0.f,0.f }, GetOutputAreaSize());
+	auto view = RectF_FromPointAndSize({ 0.f,m_itemsViewY }, GetOutputAreaSize());
 	auto p = GetOutputAreaPosition();
 	m_oldItemsList.DrawView(view, p, GetRenderer());
 }

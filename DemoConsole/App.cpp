@@ -136,6 +136,10 @@ HRESULT App::Initialize()
 
 		ShowWindow(m_hwnd, SW_SHOWNORMAL);
 		UpdateWindow(m_hwnd);
+
+		//// Test - Send two "lorem" commands to the console
+		//// in order to test the scrolling.
+		//SendMessage(m_hwnd, WM_CHAR, )
 	}
 
 	return hr;
@@ -354,6 +358,16 @@ void App::OnWMKeydown(WPARAM wParam)
 	}
 }
 
+void App::OnWMMouseWheel(WPARAM wParam)
+{
+	auto zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+	auto redraw = m_console->HandleMouseWheel(zDelta);
+	if (redraw) {
+		SendRedrawRequest();
+	}
+}
+
 
 
 //					Utils
@@ -451,6 +465,10 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 	case WM_KEYDOWN: {
 		app->OnWMKeydown(wParam);
+	}break;
+
+	case WM_MOUSEWHEEL: {
+		app->OnWMMouseWheel(wParam);
 	}break;
 
 	case WM_DESTROY: {

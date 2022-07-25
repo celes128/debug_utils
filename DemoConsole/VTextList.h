@@ -113,10 +113,24 @@ namespace gui {
 		//auto end() const { return m_items.end(); }
 
 		// DrawView draws the subset of items that overlap a rectangle (the view).
-		void DrawView(
-			const RectF &view,
-			const Point2dF &pos,
-			Renderer ren);
+		void DrawView(const RectF &view, const Point2dF &pos, Renderer ren);
+
+		struct Range {
+			size_t	begin{ 0 };
+			size_t	end{ 0 };
+
+			bool Empty() const { return begin >= end; }
+
+			static Range MakeEmpty() { return { 0,0 }; }
+		};
+
+		// GetItemsInView determines the range of text items that overlap a rectangular view.
+		Range GetItemsInView(const RectF &view);
+
+		// RETURN VALUE
+		//	Returns true iff an item crossed by the line was found.
+		//	The item index is written to k.
+		bool FindItemIntersectingHorizLine(float y, size_t *k);
 
 	private:
 		void RecreateAllItems();

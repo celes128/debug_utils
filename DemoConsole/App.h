@@ -29,6 +29,7 @@ private:
 
 	void OnWMChar(WPARAM wParam);
 	void OnWMKeydown(WPARAM wParam);
+	void OnWMMouseWheel(WPARAM wParam);
 	void OnResize(const D2D1_SIZE_U &size);
 
 

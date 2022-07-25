@@ -134,18 +134,35 @@ namespace gui {
 		}
 	}
 
-	void VTextList::DrawView(
-		const RectF &view,
-		const Point2dF &pos,
-		Renderer ren)
+	void VTextList::DrawView(const RectF &view, const Point2dF &pos, Renderer ren)
 	{
-		ren.SaveBrushColor();
+		auto range = GetItemsInView(view);
 
-		for (auto it = m_items.crbegin(); it != m_items.crend(); it++) {
-			const auto &item = *it;
+		//// DEBUG
+		//OutputDebugStringA(std::to_string(range.begin).c_str());
+		//OutputDebugStringA(",");
+		//OutputDebugStringA(std::to_string(range.end).c_str());
+		//OutputDebugStringA("\n");
+
+		if (range.Empty()) {
+			return;
+		}
+		
+		assert(0 <= range.begin && range.begin < NumItems());
+		assert(0 <= range.end && range.end <= NumItems());
+
+		auto yOffset = - view.top;
+		//// DEBUG
+		//OutputDebugStringA(std::to_string(yOffset).c_str());
+		//OutputDebugStringA(";  ");
+
+		for (auto i = range.begin; i < range.end; i++) {
+			const auto &item = m_items[i];
+
+			// Position on the render target.
+			auto p = pos + TopLeft(item.bbox) + Point2dF{0.f, yOffset};
 
 			// Draw the background rectangle.
-			auto p = pos + TopLeft(item.bbox);
 			auto size = SizeF{ GetWidth(), Height(item.bbox) };
 			auto rect = RectF_FromPointAndSize(p, size);
 
@@ -154,9 +171,42 @@ namespace gui {
 
 			// Draw the text.
 			ren.solidBrush->SetColor(item.textColor);
-			ren.renderTarget->DrawTextLayout(pos + TopLeft(item.bbox), item.textLayout, ren.solidBrush);
+			ren.renderTarget->DrawTextLayout(p, item.textLayout, ren.solidBrush);
+		}
+	}
+
+	VTextList::Range VTextList::GetItemsInView(const RectF &view)
+	{
+		// DEBUG
+		const auto n = NumItems();
+
+		// Find the item that overlaps the top of the view.
+		size_t i;
+		auto found = FindItemIntersectingHorizLine(view.top, &i);
+		size_t end = found ? i+1 : m_items.size();
+
+		// Find the item that overlaps the bottom of the view.
+		size_t begin;
+		found = FindItemIntersectingHorizLine(view.bottom, &begin);
+		if (!found) {
+			begin = 0;
 		}
 
-		ren.RestoreBrushColor();
+		return Range{ begin, end };
+	}
+
+	bool VTextList::FindItemIntersectingHorizLine(float y, size_t *k)
+	{
+		for (size_t i = 0; i < m_items.size(); i++) {
+			const auto &box = m_items[i].bbox;
+			if (box.top <= y && y <= box.bottom) {
+				if (*k) {
+					*k = i;
+				}
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

@@ -53,3 +53,10 @@ inline bool operator!=(const RectF &lhs, const RectF &rhs)
 {
 	return !(lhs == rhs);
 }
+
+inline bool RectRectIntersect(const RectF &a, const RectF &b)
+{
+	if (a.right < b.left || b.right < a.left) return false;
+	if (a.bottom < b.top || b.bottom < a.top) return false;
+	return true;
+}

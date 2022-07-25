@@ -14,6 +14,13 @@ namespace gui {
 		assert(0.f <= viewPosPercent && viewPosPercent <= 1.f);
 	}
 
+	float Scroller::GetViewPositionPercentage() const
+	{
+		auto maxPos = m_spaceLength - m_viewLength;
+
+		return m_viewPosition / maxPos;
+	}
+
 	float Scroller::ScrollUp(float displacement, bool *moved)
 	{
 		const auto previousPosition = m_viewPosition;
@@ -38,7 +45,7 @@ namespace gui {
 
 		if (displacement > 0.f) {
 			// Move the view forward <=> down <=> right.
-			auto maxMvt = std::max(m_spaceLength - m_viewPosition, 0.f);
+			auto maxMvt = std::max(m_spaceLength - (m_viewPosition + m_viewLength), 0.f);
 			auto amount = std::min((float)displacement, maxMvt);
 			m_viewPosition += amount;
 		}

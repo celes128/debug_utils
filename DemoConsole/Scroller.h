@@ -19,6 +19,16 @@ namespace gui {
 	public:
 		Scroller(float spaceLength, float viewLength, float viewPosPercent = 0.f);
 
+
+		//					ACCESSORS
+		//
+		
+		float GetViewPositionPercentage() const;
+
+
+		//					MANIPULATORS
+		//
+
 		// ScrollUp and ScrollDown try to move the view.
 		//
 		// REMARKS

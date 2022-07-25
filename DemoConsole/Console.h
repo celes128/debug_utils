@@ -8,6 +8,7 @@
 #include "Renderer.h"
 #include "VTextList.h"
 #include "Scroller.h"
+#include "VScrollBar.h"
 
 struct ConsoleItem {
 	// The raw string that is layed out in the layout below.
@@ -75,6 +76,8 @@ public:
 	void Draw(Renderer &ren);
 
 private:
+	static const float kScrollAmount;
+
 	//			Construction
 	//
 
@@ -135,6 +138,7 @@ private:
 	void DrawCmdlineString(const D2D1_COLOR_F &color);
 	void DrawCaret();
 	void DrawOldItems();
+	void DrawScrollBar();
 
 	void DrawOnMyRenderTarget();
 	
@@ -156,6 +160,10 @@ private:
 
 	std::wstring		m_promptStr;
 	RectF				m_rect;
+
+	static const float kScrollBarInitialWidth;
+	gui::VScrollBar		m_scrollBar;
+	
 	ConsoleItem			m_cmdlineItem;
 	gui::VTextList		m_oldItemsList;
 

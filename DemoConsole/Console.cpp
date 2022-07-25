@@ -32,6 +32,14 @@ void ConsoleItem::RecreateTextLayout(const SizeF &size, GraphicsContext &graphic
 	);
 }
 
+template <class T>
+T Clamp(const T &x, const T &low, const T &high)
+{
+	if (x < low)	return low;
+	else if (x > high) return high;
+	else return x;
+}
+
 void ConsoleItem::UpdateBoundingBox(const Point2dF &pos)
 {
 	SizeF	size;
@@ -65,6 +73,9 @@ private:
 //		class:				Console
 //
 
+const float Console::kScrollAmount = 200.f;
+const float Console::kScrollBarInitialWidth = 16.f;
+
 Console::Console(
 	dbgutils::Interpreter interp, size_t histCapa, size_t outputCapa,
 	const RectF &rect,
@@ -76,8 +87,20 @@ Console::Console(
 	, m_graphics(graphics)
 	, m_promptStr(promptStr)
 	, m_rect(rect)
-	, m_oldItemsList(graphics, Width(rect))
-	, m_scroller(1.f, 1.f)// dummy values
+	, m_scrollBar(
+		// Position - (The y coordinate is temporary and will be adjusted in the ctor body.)
+		{ Width(rect) - kScrollBarInitialWidth, 0.f },
+		// Size - (The height is temporary and will be adjusted in the ctor body.)
+		{ kScrollBarInitialWidth, Height(rect) },
+		// Padding
+		RectF{3.f, 3.f, 3.f, 3.f},
+		// Cursor color
+		D2D1::ColorF(D2D1::ColorF::Red),
+		// Background box color
+		ColorFrom3i(255, 221, 217)
+	)
+	, m_oldItemsList(graphics, Width(rect) - Width(m_scrollBar.GetBoundingBox()))
+	, m_scroller(1.f, 1.f)// temporary, dummy values
 {
 	assert(renderTarget != nullptr);
 
@@ -94,6 +117,13 @@ Console::Console(
 	}
 
 	UpdateAllItems();
+
+	// Adjust the scroll bar y coordinate.
+	auto x = m_scrollBar.GetPosition().x;
+	m_scrollBar.SetPosition({ x, GetOutputAreaPosition().y });
+
+	// Adjust the scroll bar height.
+	m_scrollBar.SetHeight(GetOutputAreaSize().height);
 
 	CreateScroller();
 }
@@ -176,11 +206,23 @@ bool Console::HandleChar(wchar_t c)
 
 bool Console::HandleKey(Key key)
 {
+	// Preprocess the key.
+	switch (key) {
+		case VK_PRIOR: {
+			return HandleMouseWheel(kScrollAmount);
+		}break;
+
+		case VK_NEXT: {
+			return HandleMouseWheel(-kScrollAmount);
+		}break;
+	}
+
 	auto changed = m_console.handle_key(key);
 	if (!changed) {
 		return false;// do not redraw
 	}
 
+	// Postprocess the key.
 	switch (key) {
 		case VK_RETURN: {
 			PostProcessReturnKey();
@@ -216,8 +258,13 @@ void Console::PostProcessReturnKey()
 	// Remove at most 2 items.
 	RemoveOldItemsIfTooMany(2);
 
-	// Update the scroller space length.
+	// Make sure the Scroller space length matches the height of the item list.
 	m_scroller.SetSpaceLength(m_oldItemsList.GetHeight());
+
+	// The scroll bar cursor height also must match the ratio view height / item list height.
+	auto lenPercent = GetOutputAreaSize().height / m_oldItemsList.GetHeight();
+	lenPercent = Clamp(lenPercent, 0.1f, 1.f);
+	m_scrollBar.SetCursorHeightPercent(lenPercent);
 }
 
 void Console::RemoveOldItemsIfTooMany(size_t n)
@@ -239,14 +286,16 @@ bool Console::HandleMouseWheel(int mvt)
 {
 	bool moved{ false };
 	if (mvt < 0) {
-		m_itemsViewY = m_scroller.ScrollDown(-1.f * mvt, &moved);
+		m_itemsViewY = m_scroller.ScrollDown(kScrollAmount, &moved);
 	}
 	else {
-		m_itemsViewY = m_scroller.ScrollUp(1.f * mvt, &moved);
+		m_itemsViewY = m_scroller.ScrollUp(kScrollAmount, &moved);
 	}
 
 	if (moved) {
-		//TODO: UpdateOutputAreaScrollBarPosition();
+		// Make sure the scroll bar cursor position matches the view position in the item list.
+		auto percent = m_scroller.GetViewPositionPercentage();
+		m_scrollBar.SetCursorPositionPercent(percent);
 	}
 	
 	return moved;
@@ -265,7 +314,8 @@ Point2dF Console::GetOutputAreaPosition() const
 
 SizeF Console::GetOutputAreaSize() const
 {
-	auto w = Width(m_rect);
+	//auto w = Width(m_rect);
+	auto w = m_oldItemsList.GetWidth();
 	auto h = Height(m_rect) - Height(m_cmdlineItem.bbox);
 
 	return { w,h };
@@ -321,6 +371,7 @@ void Console::DrawOnMyRenderTarget()
 	DrawBackground();
 	DrawOldItems();
 	DrawCmdline();
+	DrawScrollBar();
 
 	// Finalize rendering.
 	auto hr = m_renderTarget->EndDraw();
@@ -439,8 +490,6 @@ void Console::DrawCaret()
 
 void Console::DrawOldItems()
 {
-	HRESULT hr = S_OK;
-
 	//// We will alternate between two colors when rendering the items.
 	//auto colors = ColorSwitcher({
 	//	//ColorFrom3i(0, 200, 0),
@@ -451,4 +500,11 @@ void Console::DrawOldItems()
 	auto view = RectF_FromPointAndSize({ 0.f,m_itemsViewY }, GetOutputAreaSize());
 	auto p = GetOutputAreaPosition();
 	m_oldItemsList.DrawView(view, p, GetRenderer());
+}
+
+void Console::DrawScrollBar()
+{
+	auto ren = GetRenderer();
+
+	m_scrollBar.Render(ren);
 }

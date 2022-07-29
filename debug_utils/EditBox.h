@@ -17,6 +17,11 @@ namespace dbgutils {
 		size_t		begin{ 0 };
 		size_t		length{ 0 };
 
+		bool contains(size_t x) const
+		{
+			return begin <= x && x < begin + length;
+		}
+
 		static StringRange MakeSpaceRange(size_t beg, size_t len)
 		{
 			return StringRange{ STRING_RANGE_TYPE_SPACE, beg, len };
@@ -75,34 +80,13 @@ namespace dbgutils {
 		//Range<size_t> selection_range() const;
 
 		bool handle_key_left(const ModKeyState &mod);
+		bool handle_key_ctrl_left();
 		bool handle_key_right(const ModKeyState &mod);
 		bool handle_key_backspace(const ModKeyState &mod);
 		bool handle_key_home(const ModKeyState &mod);
 		bool handle_key_end(const ModKeyState &mod);
 
-		bool caret_at_begin() const { return m_caret <= 0; }
 		void caret_move_left(size_t n);
-
-		// DEFINITION: space character
-		//	A 'space character' is any wchar_t c such that std::isspace(c) == true. 
-		// DEFINITION: word
-		//	A 'word' is a contiguous sequence of (at least one) non-space characters.
-		bool caret_inside_word() const;
-
-		// caret_move_from_inside_to_word_begin moves the caret,
-		// located inside a word or on its last character,
-		// to the left until it reaches the beginning of the word.
-		// The function does not move the caret if the caret is not inside a word.
-		void caret_move_from_inside_to_word_begin();
-
-		// caret_move_to_previous_word_begin tries to find the previous word and
-		// if it exists, moves the caret to the beginning of it.
-		void caret_move_to_previous_word_begin();
-
-		// caret_move_from_inside_to_space_begin moves the caret,
-		// located inside a space sequence or on its right-most space character,
-		// to the lest until it reaches the beginning of this space sequence.
-		void caret_move_from_inside_to_space_begin();
 
 	private:
 		// The content of the edit box.

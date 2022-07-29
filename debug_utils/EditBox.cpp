@@ -4,7 +4,12 @@
 #include <cassert>
 
 namespace dbgutils {
-
+	
+	//	class:				StringRangeGenerator
+	//
+	//	The StringRangeGenerator is a helper class used to implement
+	//	the public function	ComputeStringRanges.
+	
 	class StringRangeGenerator {
 	public:
 		StringRangeGenerator(const std::wstring *s)
@@ -43,7 +48,7 @@ namespace dbgutils {
 		std::vector<StringRange> ranges;
 
 		// Beginning of the current range.
-		size_t	begin;
+		size_t	begin = 0;
 
 		// IMPORTANT NOTE
 		// The inequality is indeed large (<=); it is not an error.
@@ -52,10 +57,6 @@ namespace dbgutils {
 		for (size_t i = 0; i <= m_sLen; i++) {
 			auto ev = GenerateEvent(i);
 			switch (ev) {
-			case Event::Initialize: {
-				begin = 0;
-			}break;
-
 			case Event::WordRangeLeft: {
 				ranges.push_back(StringRange::MakeWordRange(begin, i - begin));
 				begin = i;
@@ -80,6 +81,7 @@ namespace dbgutils {
 
 	StringRangeGenerator::Event StringRangeGenerator::GenerateEvent(size_t i) const
 	{
+		assert(m_sLen != 0);
 		assert(i <= m_sLen && "Index out of range of the input string.");
 
 		// Did we enter the string?
@@ -120,15 +122,16 @@ namespace dbgutils {
 		}
 	}
 
-
-
-
 	std::vector<StringRange> ComputeStringRanges(const std::wstring &s)
 	{
 		StringRangeGenerator	generator(&s);
 		return generator.GenerateRanges();
 	}
 
+
+	//	class:				EditBox
+	//
+	//
 
 	EditBox::EditBox(const std::wstring str)
 		: m_str(str)
@@ -162,111 +165,63 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_left(const ModKeyState &mod)
 	{
+		if (mod.ctrl) {
+			return handle_key_ctrl_left();
+		}
+
+		auto prev = m_caret;
+		caret_move_left(1);
+		return prev != m_caret;
+	}
+
+	bool EditBox::handle_key_ctrl_left()
+	{
 		auto prev = m_caret;
 
-		if (!mod.ctrl) {
-			caret_move_left(1);
-			return prev != m_caret;
+		auto ranges = ComputeStringRanges(m_str);
+
+		// Look for the range that contains the caret.
+		auto found = false;
+		size_t i = 0;
+		for (; i < ranges.size(); i++) {
+			if (ranges[i].contains(m_caret)) {
+				found = true;
+				break;
+			}
 		}
 
-		auto inside = caret_inside_word();
-		if (inside) {
-			caret_move_from_inside_to_word_begin();
-			return prev != m_caret;
+		// Not found <=> The string is empty.
+		if (!found) {		
+			return false;
 		}
 
-		caret_move_to_previous_word_begin();
+		const auto &range = ranges[i];
+		if (range.type == STRING_RANGE_TYPE_WORD && m_caret != range.begin) {
+			m_caret = range.begin;
+		}
+		else {
+			// Move the caret to the beginning of the previous word if it exists.
+			switch (range.type) {
+			case STRING_RANGE_TYPE_SPACE: {
+				if (i >= 1) {
+					m_caret = ranges[i - 1].begin;
+				}
+			}break;
+			case STRING_RANGE_TYPE_WORD: {
+				if (i >= 2) {
+					m_caret = ranges[i - 2].begin;
+				}
+			}break;
+			}
+		}
+
 		return prev != m_caret;
 	}
 
 	void EditBox::caret_move_left(size_t n)
 	{
-		for(; !caret_at_begin() && n > 0; n--) {
+		for(; m_caret >= 1 && n > 0; n--) {
 			--m_caret;
-		}
-	}
-
-	bool EditBox::caret_inside_word() const
-	{
-		if (caret_at_begin()) {
-			return false;
-		}
-
-		auto caretOnSpace = std::isspace(m_str[m_caret]);
-		if (caretOnSpace) {
-			return false;
-		}
-
-		// Here we know that:
-		//	- there is at least one character on the left of the caret (a space or not a space)
-		//	- the caret is not on a space character.
-		// We can safely access m_str[m_caret - 1].
-		
-		auto spaceOnLeftOfCaret = std::isspace(m_str[m_caret - 1]);
-		if (spaceOnLeftOfCaret) {
-			return false;
-		}
-
-		// Here both the caret and caret-1 point to a non-space character
-		// meaning that the caret is inside a word.
-		return true;
-	}
-
-	void EditBox::caret_move_from_inside_to_word_begin()
-	{
-		while (caret_inside_word()) {
-			caret_move_left(1);
-		}
-	}
-
-	void EditBox::caret_move_to_previous_word_begin()
-	{
-		// Save the caret to restore it later if the operation fails,
-		// because there is no word on the left.
-		auto savedCaret = m_caret;
-
-		// If the caret is inside a word, try to move it outside.
-		if (caret_inside_word()) {
-			caret_move_from_inside_to_word_begin();
-
-			// Move the caret to the last space character of
-			// the contiguous space sequence on the left.
-			if (m_caret > 0) {
-				m_caret--;
-			}
-
-		}
-
-		// Failure: The caret was on the first word of the string and
-		// there is no space on the left.
-		if (caret_at_begin()) {
-			m_caret = savedCaret;
-			return;
-		}
-		
-		caret_move_from_inside_to_space_begin();
-
-		// Failure: The caret was on the first word of the string.
-		// (And the string begins with at least one space.)
-		if (caret_at_begin()) {
-			m_caret = savedCaret;
-			return;
-		}
-
-		// At this point we know that there is a previous word.
-		// Move the caret to the last character of the word on the left.
-		m_caret--;
-
-		caret_move_from_inside_to_word_begin();
-	}
-
-	void EditBox::caret_move_from_inside_to_space_begin()
-	{
-		for (; m_caret >= 1; m_caret--) {
-			auto leftCharIsASpace = std::isspace(m_str[m_caret - 1]);
-			if (!leftCharIsASpace) {
-				return;
-			}
 		}
 	}
 

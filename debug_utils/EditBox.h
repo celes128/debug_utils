@@ -1,10 +1,47 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "Key.h"
 #include "Range.h"
 
 namespace dbgutils {
+
+	enum STRING_RANGE_TYPE {
+		STRING_RANGE_TYPE_WORD,
+		STRING_RANGE_TYPE_SPACE
+	};
+	struct StringRange {
+		STRING_RANGE_TYPE	type{ STRING_RANGE_TYPE_WORD };
+
+		size_t		begin{ 0 };
+		size_t		length{ 0 };
+
+		static StringRange MakeSpaceRange(size_t beg, size_t len)
+		{
+			return StringRange{ STRING_RANGE_TYPE_SPACE, beg, len };
+		}
+		static StringRange MakeWordRange(size_t beg, size_t len)
+		{
+			return StringRange{ STRING_RANGE_TYPE_WORD, beg, len };
+		}
+	};
+
+	inline bool operator==(const dbgutils::StringRange &lhs, const dbgutils::StringRange &rhs)
+	{
+		return lhs.type == rhs.type
+			&& lhs.begin == rhs.begin
+			&& lhs.length == rhs.length;
+	}
+	
+	inline bool operator!=(const dbgutils::StringRange &lhs, const dbgutils::StringRange &rhs)
+	{
+		return !(lhs == rhs);
+	}
+
+
+
+	std::vector<StringRange> ComputeStringRanges(const std::wstring &s);
 
 	class EditBox {
 	public:

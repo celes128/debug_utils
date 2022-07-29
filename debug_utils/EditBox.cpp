@@ -1,8 +1,134 @@
 #include "pch.h"
 #include "EditBox.h"
 #include <cctype> // std::isspace
+#include <cassert>
 
 namespace dbgutils {
+
+	class StringRangeGenerator {
+	public:
+		StringRangeGenerator(const std::wstring *s)
+			: m_s(s)
+		{
+			assert(s != nullptr);
+			m_sLen = s->length();
+		}
+
+		std::vector<StringRange> GenerateRanges();
+
+	private:
+		enum Event {
+			Unknown,
+			Initialize,
+			WordRangeLeft,
+			WordRangeContinued,
+			SpaceRangeLeft,
+			SpaceRangeContinued
+		};
+
+		// GenerateEvent returns an event based on the index i in the input string.
+		Event GenerateEvent(size_t i) const;
+
+	private:
+		const std::wstring	*m_s;
+		size_t				m_sLen;
+	};
+
+	std::vector<StringRange> StringRangeGenerator::GenerateRanges()
+	{
+		if (m_s->empty()) {
+			return {};
+		}
+
+		std::vector<StringRange> ranges;
+
+		// Beginning of the current range.
+		size_t	begin;
+
+		// IMPORTANT NOTE
+		// The inequality is indeed large (<=); it is not an error.
+		// The value m_sLen for the loop index i is a sentinel and
+		// is handled by GenerateEvent.
+		for (size_t i = 0; i <= m_sLen; i++) {
+			auto ev = GenerateEvent(i);
+			switch (ev) {
+			case Event::Initialize: {
+				begin = 0;
+			}break;
+
+			case Event::WordRangeLeft: {
+				ranges.push_back(StringRange::MakeWordRange(begin, i - begin));
+				begin = i;
+			}break;
+			
+			case Event::SpaceRangeLeft: {
+				ranges.push_back(StringRange::MakeSpaceRange(begin, i - begin));
+				begin = i;
+			}break;
+
+			case Event::Unknown: {
+				assert(false && "Should never happen.");
+			}break;
+
+			default:// Nothing to do.
+				break;
+			}
+		}
+
+		return ranges;
+	}
+
+	StringRangeGenerator::Event StringRangeGenerator::GenerateEvent(size_t i) const
+	{
+		assert(i <= m_sLen && "Index out of range of the input string.");
+
+		// Did we enter the string?
+		if (i == 0) {
+			return Event::Initialize;
+		}
+
+		auto prev = (*m_s)[i-1];
+
+		// Did we quit the string?
+		if (i == m_sLen) {
+			if (std::isspace(prev)) {
+				return Event::SpaceRangeLeft;
+			}
+			else {
+				return Event::WordRangeLeft;
+			}
+		}
+
+		// Here we can access [i] since 0 <= i < m_sLen.
+		auto cur = (*m_s)[i];
+
+		if (std::isspace(prev)) {
+			if (std::isspace(cur)) {
+				return Event::SpaceRangeContinued;
+			}
+			else {
+				return Event::SpaceRangeLeft;
+			}
+		}
+		
+		// Here, prev is not a space.
+		if (std::isspace(cur)) {
+			return Event::WordRangeLeft;
+		}
+		else {
+			return Event::WordRangeContinued;
+		}
+	}
+
+
+
+
+	std::vector<StringRange> ComputeStringRanges(const std::wstring &s)
+	{
+		StringRangeGenerator	generator(&s);
+		return generator.GenerateRanges();
+	}
+
 
 	EditBox::EditBox(const std::wstring str)
 		: m_str(str)

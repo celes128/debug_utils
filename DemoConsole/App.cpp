@@ -352,6 +352,11 @@ void App::OnWMKeydown(WPARAM wParam)
 {
 	auto key = static_cast<Key>(wParam);
 
+	//// Get Modifier Keys State
+	//auto ctrl = is_key_down(VK_CONTROL);
+	//auto alt = is_key_down(VK_MENU);
+	//auto mod = ModKeyState{ ctrl, alt };
+
 	auto redraw = m_console->HandleKey(key);
 	if (redraw) {
 		SendRedrawRequest();

@@ -80,3 +80,48 @@ TEST(EditBox, CharBackspaceCharLeftChar)
 	auto expected = L"ab";
 	EXPECT_EQ(got, expected);
 }
+
+// Utility function for the tests.
+static void PositionCaretAt(dbgutils::EditBox &ed, size_t position)
+{
+	// Move the caret to the beginning of the string.
+	ed.handle_key(VK_HOME);
+
+	for (size_t i = 0; i < position; i++) {
+		ed.handle_key(VK_RIGHT);
+	}
+}
+
+TEST(EditBox, CtrlLeft)
+{
+	dbgutils::EditBox ed(L"ab c  def ");
+
+	struct Test {
+		size_t	caretBeforeTheCall;
+		size_t	expectedCaret;
+	};
+
+	std::vector<Test> tests = {
+		{0, 0},
+		{1, 0},
+		{2, 0},
+		{3, 0},
+		{4, 3},
+		{5, 3},
+		{6, 3},
+		{7, 6},
+		{8, 6},
+		{9, 6}
+	};
+
+	for (const auto &t : tests) {
+		PositionCaretAt(ed, t.caretBeforeTheCall);
+
+		// The user presses Ctrl + Left key.
+		ed.handle_key(VK_LEFT, ModKeyState{ true, false });
+	
+		auto got = ed.caret();
+		auto exp = t.expectedCaret;
+		EXPECT_EQ(got, exp);
+	}
+}

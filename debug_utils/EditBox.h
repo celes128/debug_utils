@@ -44,9 +44,12 @@ namespace dbgutils {
 		return !(lhs == rhs);
 	}
 
-
-
 	std::vector<StringRange> ComputeStringRanges(const std::wstring &s);
+
+	bool FindRangeContainingIndex(
+		IN size_t index,
+		IN const std::vector<StringRange> &ranges,
+		OUT size_t *iRange);
 
 	class EditBox {
 	public:
@@ -87,6 +90,10 @@ namespace dbgutils {
 		bool handle_key_end(const ModKeyState &mod);
 
 		void caret_move_left(size_t n);
+
+		// RETURN VALUE
+		//	Returns true iff the caret moved.
+		bool caret_move_to_prev_word_begin(const std::vector<StringRange> &ranges, size_t iCaretRange);
 
 	private:
 		// The content of the edit box.

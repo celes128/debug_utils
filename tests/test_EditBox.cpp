@@ -125,3 +125,74 @@ TEST(EditBox, CtrlLeft)
 		EXPECT_EQ(got, exp);
 	}
 }
+
+TEST(EditBox, CtrlLeftEmptyString)
+{
+	dbgutils::EditBox ed(L"");
+
+	struct Test {
+		size_t	caretBeforeTheCall;
+		size_t	expectedCaret;
+	};
+	
+	// The user presses Ctrl + Left key.
+	ed.handle_key(VK_LEFT, ModKeyState{ true, false });
+
+	auto got = ed.caret();
+	auto exp = 0;
+	EXPECT_EQ(got, exp);
+}
+
+TEST(EditBox, CtrlLeftCharacterOnlyString)
+{
+	dbgutils::EditBox ed(L"abcdef");
+
+	struct Test {
+		size_t	caretBeforeTheCall;
+		size_t	expectedCaret;
+	};
+
+	std::vector<Test> tests = {
+		{0, 0},
+		{1, 0},
+		{6, 0}
+	};
+
+	for (const auto &t : tests) {
+		PositionCaretAt(ed, t.caretBeforeTheCall);
+
+		// The user presses Ctrl + Left key.
+		ed.handle_key(VK_LEFT, ModKeyState{ true, false });
+
+		auto got = ed.caret();
+		auto exp = t.expectedCaret;
+		EXPECT_EQ(got, exp);
+	}
+}
+
+TEST(EditBox, CtrlLeftWhitespaceOnlyString)
+{
+	dbgutils::EditBox ed(L"      ");
+
+	struct Test {
+		size_t	caretBeforeTheCall;
+		size_t	expectedCaret;
+	};
+
+	std::vector<Test> tests = {
+		{0, 0},
+		{1, 0},
+		{6, 0}
+	};
+
+	for (const auto &t : tests) {
+		PositionCaretAt(ed, t.caretBeforeTheCall);
+
+		// The user presses Ctrl + Left key.
+		ed.handle_key(VK_LEFT, ModKeyState{ true, false });
+
+		auto got = ed.caret();
+		auto exp = t.expectedCaret;
+		EXPECT_EQ(got, exp);
+	}
+}

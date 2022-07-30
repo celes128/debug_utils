@@ -128,6 +128,25 @@ namespace dbgutils {
 		return generator.GenerateRanges();
 	}
 
+	bool FindRangeContainingIndex(
+		IN size_t index,
+		IN const std::vector<StringRange> &ranges,
+		OUT size_t *iRange)
+	{
+		assert(iRange != nullptr);
+
+		for (size_t i = 0; i < ranges.size(); i++) {
+			if (ranges[i].contains(index)) {
+				if (iRange) {
+					*iRange = i;
+				}
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 
 	//	class:				EditBox
 	//
@@ -176,43 +195,87 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_ctrl_left()
 	{
+		// Save the caret in order to check, before returning, if it moved.
 		auto prev = m_caret;
 
+		// Determine the word and space ranges in the input string.
 		auto ranges = ComputeStringRanges(m_str);
 
 		// Look for the range that contains the caret.
-		auto found = false;
 		size_t i = 0;
-		for (; i < ranges.size(); i++) {
-			if (ranges[i].contains(m_caret)) {
-				found = true;
+		auto found = FindRangeContainingIndex(IN m_caret, IN ranges, OUT &i);
+
+		// Special case: the caret is not in a range <=> the caret is at the end of the string.
+		if (!found) {
+			auto n = ranges.size();
+			switch (n) {
+			case 0:
+				// The string is empty. Do not move the caret.
+				return false;
 				break;
+
+			case 1:
+				// The string has only one range.
+				// Put the caret at the beginning of the string.
+				m_caret = 0;
+				return prev != m_caret;
+
+			default:
+				// There are at least two ranges in the string. There are only two cases:
+				//	(1) the string ends in { ..., word range, space range } or,
+				//	(2) the string ends in { ..., space range, word range }.
+				const auto &secondToLast = ranges[n - 2];
+				const auto &last = ranges[n - 1];
+				if (last.type == STRING_RANGE_TYPE_SPACE) { // (1)
+					m_caret = secondToLast.begin;
+				}
+				else if (last.type == STRING_RANGE_TYPE_WORD) { // (2)
+					m_caret = last.begin;
+				}
+				return prev != m_caret;
 			}
 		}
 
-		// Not found <=> The string is empty.
-		if (!found) {		
-			return false;
+		// Special case 2: the caret is in a range and #ranges == 1.
+		if (ranges.size() == 1) {
+			m_caret = 0;
+			return prev != m_caret;
 		}
 
+		// The most general case: the caret is in a range and #ranges >= 2.
 		const auto &range = ranges[i];
+
+		// When the caret is inside a word but not at its first character,
+		// move the caret to the first character.
 		if (range.type == STRING_RANGE_TYPE_WORD && m_caret != range.begin) {
 			m_caret = range.begin;
+			return prev != m_caret;
 		}
-		else {
-			// Move the caret to the beginning of the previous word if it exists.
-			switch (range.type) {
-			case STRING_RANGE_TYPE_SPACE: {
-				if (i >= 1) {
-					m_caret = ranges[i - 1].begin;
-				}
-			}break;
-			case STRING_RANGE_TYPE_WORD: {
-				if (i >= 2) {
-					m_caret = ranges[i - 2].begin;
-				}
-			}break;
+		
+		// Else try to move the caret to the previous word.
+		// It may not exist hence the "try".
+		return caret_move_to_prev_word_begin(ranges, i);
+	}
+
+	bool EditBox::caret_move_to_prev_word_begin(const std::vector<StringRange> &ranges, size_t iCaretRange)
+	{
+		const auto n = ranges.size();
+		assert(iCaretRange <= n);
+
+		auto prev = m_caret;
+
+		const auto &range = ranges[iCaretRange];
+		switch (range.type) {
+		case STRING_RANGE_TYPE_SPACE: {
+			if (iCaretRange >= 1) {
+				m_caret = ranges[iCaretRange - 1].begin;
 			}
+		}break;
+		case STRING_RANGE_TYPE_WORD: {
+			if (iCaretRange >= 2) {
+				m_caret = ranges[iCaretRange - 2].begin;
+			}
+		}break;
 		}
 
 		return prev != m_caret;

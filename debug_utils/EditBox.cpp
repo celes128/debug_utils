@@ -147,6 +147,29 @@ namespace dbgutils {
 		return false;
 	}
 
+	bool FindPreviousRangeType(
+		IN STRING_RANGE_TYPE type,
+		IN size_t start,
+		IN const std::vector<StringRange> &ranges,
+		OUT size_t *iRange)
+	{
+		assert(iRange != nullptr);
+		const auto n = ranges.size();
+		assert(0 <= start && start <= n);// large inequality here
+
+		for (size_t i = start; i > 0; i--) {
+			if (ranges[i-1].type == type) {
+				if (iRange) {
+					*iRange = i-1;
+				}
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+
 
 	//	class:				EditBox
 	//
@@ -203,81 +226,45 @@ namespace dbgutils {
 
 		// Look for the range that contains the caret.
 		size_t i = 0;
-		auto found = FindRangeContainingIndex(IN m_caret, IN ranges, OUT &i);
+		auto caretInARange = FindRangeContainingIndex(IN m_caret, IN ranges, OUT &i);
+		if (!caretInARange) {
+			// Case where the caret is at the end of the string, hence does not belong
+			// to any range. We put a sentinel value to i that will be handled by
+			// the following code below.
+			i = ranges.size();
+		}
 
-		// Special case: the caret is not in a range <=> the caret is at the end of the string.
-		if (!found) {
-			auto n = ranges.size();
-			switch (n) {
-			case 0:
-				// The string is empty. Do not move the caret.
-				return false;
-				break;
-
-			case 1:
-				// The string has only one range.
-				// Put the caret at the beginning of the string.
-				m_caret = 0;
-				return prev != m_caret;
-
-			default:
-				// There are at least two ranges in the string. There are only two cases:
-				//	(1) the string ends in { ..., word range, space range } or,
-				//	(2) the string ends in { ..., space range, word range }.
-				const auto &secondToLast = ranges[n - 2];
-				const auto &last = ranges[n - 1];
-				if (last.type == STRING_RANGE_TYPE_SPACE) { // (1)
-					m_caret = secondToLast.begin;
-				}
-				else if (last.type == STRING_RANGE_TYPE_WORD) { // (2)
-					m_caret = last.begin;
-				}
+		// If the caret is in a word range but not at the begining,
+		// we move it to the beginning of this range.
+		if (caretInARange) {
+			const auto &caretRange = ranges[i];
+			if (caretRange.type == STRING_RANGE_TYPE_WORD && m_caret != caretRange.begin) {
+				m_caret = caretRange.begin;
 				return prev != m_caret;
 			}
 		}
 
-		// Special case 2: the caret is in a range and #ranges == 1.
-		if (ranges.size() == 1) {
-			m_caret = 0;
+		// From now on, we try to find a range to move the caret to.
+		// j is the index of this range.
+		size_t j;
+
+		// Then we look for a word range on the left.
+		auto prevWordRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
+		if (prevWordRangeFound) {
+			m_caret = ranges[j].begin;
 			return prev != m_caret;
 		}
 
-		// The most general case: the caret is in a range and #ranges >= 2.
-		const auto &range = ranges[i];
-
-		// When the caret is inside a word but not at its first character,
-		// move the caret to the first character.
-		if (range.type == STRING_RANGE_TYPE_WORD && m_caret != range.begin) {
-			m_caret = range.begin;
+		// Then we look for a space range on the left.
+		auto prevSpaceRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_SPACE, i, ranges, &j);
+		if (prevSpaceRangeFound) {
+			m_caret = ranges[j].begin;
 			return prev != m_caret;
 		}
-		
-		// Else try to move the caret to the previous word.
-		// It may not exist hence the "try".
-		return caret_move_to_prev_word_begin(ranges, i);
-	}
 
-	bool EditBox::caret_move_to_prev_word_begin(const std::vector<StringRange> &ranges, size_t iCaretRange)
-	{
-		const auto n = ranges.size();
-		assert(iCaretRange <= n);
-
-		auto prev = m_caret;
-
-		const auto &range = ranges[iCaretRange];
-		switch (range.type) {
-		case STRING_RANGE_TYPE_SPACE: {
-			if (iCaretRange >= 1) {
-				m_caret = ranges[iCaretRange - 1].begin;
-			}
-		}break;
-		case STRING_RANGE_TYPE_WORD: {
-			if (iCaretRange >= 2) {
-				m_caret = ranges[iCaretRange - 2].begin;
-			}
-		}break;
-		}
-
+		// If no previous range could be found then it means that
+		// the string is empty so we put the caret at the beginning of it.
+		m_caret = 0;
 		return prev != m_caret;
 	}
 

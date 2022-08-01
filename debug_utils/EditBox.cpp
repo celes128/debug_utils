@@ -197,6 +197,9 @@ namespace dbgutils {
 	//
 	//
 
+
+	const EditBox::Movement EditBox::Movement::Zero = Movement{ 0,0 };
+
 	EditBox::EditBox(const std::wstring str)
 		: m_str(str)
 		, m_caret(str.length())
@@ -227,17 +230,24 @@ namespace dbgutils {
 		return changed;
 	}
 
-	bool EditBox::handle_key_left(const ModKeyState &mod)
+	bool EditBox::handle_arrow_key(Direction dir, const ModKeyState &mod)
 	{
+		assert(dir == Direction::LEFT || dir == Direction::RIGHT);
+
 		auto mvt = simulate_caret_movement(
-			Direction::LEFT,
+			dir,
 			1,
 			mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED
 		);
 
 		m_caret = mvt.after;
-		
-		return !mvt.null();
+
+		return !mvt.is_null();
+	}
+
+	bool EditBox::handle_key_left(const ModKeyState &mod)
+	{
+		return handle_arrow_key(Direction::LEFT, mod);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement(
@@ -260,7 +270,7 @@ namespace dbgutils {
 		}
 
 		assert(false && "Direction not yet implemented.");
-		return Movement::MakeNull();
+		return Movement::Zero;
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_left(size_t amount)
@@ -321,15 +331,7 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_right(const ModKeyState &mod)
 	{
-		auto mvt = simulate_caret_movement(
-			Direction::RIGHT,
-			1,
-			mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED
-		);
-
-		m_caret = mvt.after;
-
-		return !mvt.null();
+		return handle_arrow_key(Direction::RIGHT, mod);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_right(size_t amount)

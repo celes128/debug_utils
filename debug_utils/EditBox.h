@@ -102,17 +102,20 @@ namespace dbgutils {
 	private:
 		bool handle_key_left(const ModKeyState &mod);
 		bool handle_key_right(const ModKeyState &mod);
+		bool handle_arrow_key(Direction dir, const ModKeyState &mod);
+
 		bool handle_key_backspace(const ModKeyState &mod);
 		bool handle_key_home(const ModKeyState &mod);
 		bool handle_key_end(const ModKeyState &mod);
 
+
 		struct Movement {
-			// Position (in the string) before the movement.
+			// Position (in a string) before the movement.
 			size_t	before{ 0 };
-			// Position (in the string) after the movement.
+			// Position (in a string) after the movement.
 			size_t	after{ 0 };
 
-			bool null() const { return after == before; }
+			bool is_null() const { return after == before; }
 
 			Range<size_t> get_range() const
 			{
@@ -122,10 +125,7 @@ namespace dbgutils {
 				};
 			}
 
-			static Movement MakeNull()
-			{
-				return Movement{ 0,0 };
-			}
+			static const Movement Zero;
 		};
 
 		enum CTRL_KEY_STATE {

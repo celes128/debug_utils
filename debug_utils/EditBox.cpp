@@ -229,20 +229,46 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_left(const ModKeyState &mod)
 	{
-		if (mod.ctrl) {
-			return handle_key_ctrl_left();
-		}
+		auto mvt = simulate_caret_movement(
+			Direction::LEFT,
+			1,
+			mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED
+		);
 
-		auto prev = m_caret;
-		caret_move_left(1);
-		return prev != m_caret;
+		m_caret = mvt.after;
+		
+		return !mvt.null();
 	}
 
-	bool EditBox::handle_key_ctrl_left()
+	EditBox::Movement EditBox::simulate_caret_movement(
+		Direction dir, size_t amount, CTRL_KEY_STATE ctrl)
 	{
-		// Save the caret in order to check, before returning, if it moved.
-		auto prev = m_caret;
+		if (dir == Direction::LEFT) {
+			if (ctrl == CTRL_RELEASED) {
+				return simulate_caret_movement_left(amount);
+			}
+			else {
+				return simulate_caret_movement_ctrl_left();
+			}
+		}
 
+		assert(false && "Direction not yet implemented.");
+		return Movement::MakeNull();
+	}
+
+	EditBox::Movement EditBox::simulate_caret_movement_left(size_t amount)
+	{
+		auto maxMove = m_caret - 0;
+		auto displacement = std::min(amount, maxMove);
+		
+		return Movement{
+			m_caret,				// before
+			m_caret - displacement	// after
+		};
+	}
+
+	EditBox::Movement EditBox::simulate_caret_movement_ctrl_left()
+	{
 		// Determine the word and space ranges in the input string.
 		auto ranges = ComputeStringRanges(m_str);
 
@@ -261,8 +287,7 @@ namespace dbgutils {
 		if (caretInARange) {
 			const auto &caretRange = ranges[i];
 			if (caretRange.type == STRING_RANGE_TYPE_WORD && m_caret != caretRange.begin) {
-				m_caret = caretRange.begin;
-				return prev != m_caret;
+				return Movement{ m_caret, caretRange.begin };
 			}
 		}
 
@@ -273,21 +298,18 @@ namespace dbgutils {
 		// Then we look for a word range on the left.
 		auto prevWordRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
 		if (prevWordRangeFound) {
-			m_caret = ranges[j].begin;
-			return prev != m_caret;
+			return Movement{ m_caret, ranges[j].begin };
 		}
 
 		// Then we look for a space range on the left.
 		auto prevSpaceRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_SPACE, i, ranges, &j);
-		if (prevSpaceRangeFound) {
-			m_caret = ranges[j].begin;
-			return prev != m_caret;
+		if (prevSpaceRangeFound) {			
+			return Movement{ m_caret, ranges[j].begin };
 		}
 
 		// If no previous range could be found then it means that
 		// the string is empty so we put the caret at the beginning of it.
-		m_caret = 0;
-		return prev != m_caret;
+		return Movement{ m_caret, 0 };
 	}
 
 	void EditBox::caret_move_left(size_t n)

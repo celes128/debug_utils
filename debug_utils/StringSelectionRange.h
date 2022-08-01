@@ -1,13 +1,9 @@
 #pragma once
 
 #include "Range.h"
+#include "Direction.h"
 
 namespace dbgutils {
-
-	enum Direction {
-		LEFT,
-		RIGHT
-	};
 
 	class StringSelectionRange {
 	public:

@@ -1,7 +1,10 @@
 #pragma once
 
+#define NOMINMAX
 #include <string>
 #include <vector>
+#include <algorithm>
+#include "Direction.h"
 #include "Key.h"
 #include "Range.h"
 
@@ -112,6 +115,41 @@ namespace dbgutils {
 		bool handle_key_end(const ModKeyState &mod);
 
 		void caret_move_left(size_t n);
+
+		struct Movement {
+			// Position (in the string) before the movement.
+			size_t	before{ 0 };
+			// Position (in the string) after the movement.
+			size_t	after{ 0 };
+
+			bool null() const { return after == before; }
+
+			Range<size_t> get_range() const
+			{
+				return Range<size_t>{
+					std::min(before, after),// begin
+					std::max(before, after)// end
+				};
+			}
+
+			static Movement MakeNull()
+			{
+				return Movement{ 0,0 };
+			}
+		};
+
+		enum CTRL_KEY_STATE {
+			CTRL_RELEASED = 0,
+			CTRL_PRESSED = 1
+		};
+		
+		// REMAKRS
+		//	If the ctrl key is pressed, the amount parameter is ignored.
+		Movement simulate_caret_movement(Direction dir, size_t amount, CTRL_KEY_STATE ctrl);
+
+		Movement simulate_caret_movement_ctrl_left();
+		// Simulate a left movement of at most amount posisitions in the string.
+		Movement simulate_caret_movement_left(size_t amount);
 
 	private:
 		// The content of the edit box.

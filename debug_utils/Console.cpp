@@ -43,7 +43,7 @@ namespace dbgutils {
 		return cur_editbox().handle_character(c);
 	}
 
-	bool Console::handle_key(Key key)
+	bool Console::handle_key(Key key, const ModKeyState &mod)
 	{
 		bool changed = false;
 
@@ -57,7 +57,7 @@ namespace dbgutils {
 		case VK_DOWN:	changed = handle_down_key();
 			break;
 		
-		default:		changed = cur_editbox().handle_key(key);
+		default:		changed = cur_editbox().handle_key(key, mod);
 			break;
 		}
 

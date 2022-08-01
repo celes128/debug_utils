@@ -204,7 +204,7 @@ bool Console::HandleChar(wchar_t c)
 	return true;// redraw
 }
 
-bool Console::HandleKey(Key key)
+bool Console::HandleKey(Key key, const ModKeyState &mod)
 {
 	// Preprocess the key.
 	switch (key) {
@@ -217,7 +217,7 @@ bool Console::HandleKey(Key key)
 		}break;
 	}
 
-	auto changed = m_console.handle_key(key);
+	auto changed = m_console.handle_key(key, mod);
 	if (!changed) {
 		return false;// do not redraw
 	}
@@ -282,7 +282,7 @@ void Console::RemoveOldItemsIfTooMany(size_t n)
 	#endif
 }
 
-bool Console::HandleMouseWheel(int mvt)
+bool Console::HandleMouseWheel(float mvt)
 {
 	bool moved{ false };
 	if (mvt < 0) {

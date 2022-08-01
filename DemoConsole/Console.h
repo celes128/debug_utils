@@ -67,11 +67,11 @@ public:
 
 	// RETURN VALUE
 	//	Returns true iff the console needs to be redrawn.
-	bool HandleKey(Key key);
+	bool HandleKey(Key key, const ModKeyState &mod);
 
 	// RETURN VALUE
 	//	Returns true iff the console needs to be redrawn.
-	bool HandleMouseWheel(int mvt);
+	bool HandleMouseWheel(float mvt);
 
 	void Draw(Renderer &ren);
 

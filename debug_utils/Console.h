@@ -73,7 +73,7 @@ namespace dbgutils {
 		//
 		// All handle_xxx functions return true iff the command line content or the caret changed.
 		bool handle_character(IN wchar_t c);
-		bool handle_key(Key key);
+		bool handle_key(Key key, const ModKeyState &mod = ModKeyState());
 
 	private:
 		const EditBox & cur_editbox() const;

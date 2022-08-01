@@ -63,6 +63,14 @@ namespace dbgutils {
 		IN const std::vector<StringRange> &ranges,
 		OUT size_t *iRange);
 
+	// RETURN VALUE
+	//	Returns true iff a range was found.
+	//	The range is returned in the output variable iRange.
+	bool FindNextRangeType(
+		IN STRING_RANGE_TYPE type,
+		IN size_t start,
+		IN const std::vector<StringRange> &ranges,
+		OUT size_t *iRange);
 
 	class EditBox {
 	public:
@@ -98,6 +106,7 @@ namespace dbgutils {
 		bool handle_key_left(const ModKeyState &mod);
 		bool handle_key_ctrl_left();
 		bool handle_key_right(const ModKeyState &mod);
+		bool handle_key_ctrl_right();
 		bool handle_key_backspace(const ModKeyState &mod);
 		bool handle_key_home(const ModKeyState &mod);
 		bool handle_key_end(const ModKeyState &mod);

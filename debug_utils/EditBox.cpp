@@ -230,6 +230,11 @@ namespace dbgutils {
 		return changed;
 	}
 
+	bool EditBox::handle_key_left(const ModKeyState &mod)
+	{
+		return handle_arrow_key(Direction::LEFT, mod);
+	}
+
 	bool EditBox::handle_arrow_key(Direction dir, const ModKeyState &mod)
 	{
 		assert(dir == Direction::LEFT || dir == Direction::RIGHT);
@@ -240,37 +245,36 @@ namespace dbgutils {
 			mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED
 		);
 
-		m_caret = mvt.after;
-
-		return !mvt.is_null();
-	}
-
-	bool EditBox::handle_key_left(const ModKeyState &mod)
-	{
-		return handle_arrow_key(Direction::LEFT, mod);
+		return set_caret(mvt.after);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement(
 		Direction dir, size_t amount, CTRL_KEY_STATE ctrl)
 	{
-		if (dir == Direction::LEFT) {
+		switch (dir) {
+		case Direction::LEFT:
 			if (ctrl == CTRL_RELEASED) {
 				return simulate_caret_movement_left(amount);
 			}
 			else {
 				return simulate_caret_movement_ctrl_left();
 			}
-		} else if (dir == Direction::RIGHT) {
+			break;
+
+		case Direction::RIGHT:
 			if (ctrl == CTRL_RELEASED) {
 				return simulate_caret_movement_right(amount);
 			}
 			else {
 				return simulate_caret_movement_ctrl_right();
 			}
-		}
+			break;
 
-		assert(false && "Direction not yet implemented.");
-		return Movement::Zero;
+		default:
+			assert(false && "Direction not yet implemented.");
+			return Movement::Zero;
+			break;
+		}
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_left(size_t amount)
@@ -390,21 +394,23 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_home(const ModKeyState &mod)
 	{
-		if (m_str.length() == 0 || m_caret == 0) {
-			return false;
-		}
-
-		m_caret = 0;
-		return true;
+		return set_caret(0);
 	}
 
 	bool EditBox::handle_key_end(const ModKeyState &mod)
 	{
-		if (m_caret >= m_str.length()) {
-			return false;
-		}
+		return set_caret(m_str.length());
+	}
 
-		m_caret = m_str.length();
-		return true;
+	bool EditBox::set_caret(size_t position)
+	{
+		const auto len = m_str.length();
+		assert(0 <= position && position <= len);
+
+		auto before = m_caret;
+
+		m_caret = position;
+
+		return m_caret != before;
 	}
 }

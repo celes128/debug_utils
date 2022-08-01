@@ -7,6 +7,7 @@
 #include "Direction.h"
 #include "Key.h"
 #include "Range.h"
+#include "StringSelectionRange.h"
 
 namespace dbgutils {
 
@@ -108,6 +109,11 @@ namespace dbgutils {
 		bool handle_key_home(const ModKeyState &mod);
 		bool handle_key_end(const ModKeyState &mod);
 
+		// set_caret moves the caret at a given position.
+		//
+		// RETURN VALUE
+		//	Returns true iff the caret changed position.
+		bool set_caret(size_t position);
 
 		struct Movement {
 			// Position (in a string) before the movement.
@@ -151,5 +157,8 @@ namespace dbgutils {
 		
 		// Position of the caret inside the string.
 		size_t			m_caret{ 0 };
+
+		// Current substring selected (when the user holds Shift down).
+		StringSelectionRange	m_selection;
 	};
 }

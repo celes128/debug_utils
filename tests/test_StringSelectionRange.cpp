@@ -9,7 +9,7 @@ static void RunDragCaretTest(
 	using Dir = dbgutils::Direction;
 	using StrSelRange = dbgutils::StringSelectionRange;
 
-	ssr.DragCaret(dragDirection, dragAmount, maxLength);
+	ssr.drag_caret(dragDirection, dragAmount, maxLength);
 
 	auto got = StrSelRange(ssr.get_caret_side(), ssr.get_range());
 	EXPECT_EQ(got, expected);

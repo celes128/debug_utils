@@ -25,7 +25,7 @@ namespace dbgutils {
 		return point;
 	}
 
-	void StringSelectionRange::DragCaret(Direction dir, size_t amount, size_t end)
+	void StringSelectionRange::drag_caret(Direction dir, size_t amount, size_t end)
 	{
 		// Compute the two end points of the new range.
 		auto newCaret = MovePoint(get_caret(), dir, amount, end);

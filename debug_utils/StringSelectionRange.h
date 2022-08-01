@@ -10,12 +10,12 @@ namespace dbgutils {
 		friend bool operator==(const StringSelectionRange &lhs, const StringSelectionRange &rhs);
 		friend bool operator!=(const StringSelectionRange &lhs, const StringSelectionRange &rhs);
 
-		StringSelectionRange(Direction caretSide, const Range<size_t> &range = Range<size_t>(0, 0))
+		StringSelectionRange(Direction caretSide = Direction::LEFT, const Range<size_t> &range = Range<size_t>(0, 0))
 			: m_range(range)
 			, m_caretSide(caretSide)
 		{}
 
-		StringSelectionRange(Direction caretSide, size_t begin = 0, size_t end = 0)
+		StringSelectionRange(Direction caretSide, size_t begin, size_t end)
 			: m_range(begin, end)
 			, m_caretSide(caretSide)
 		{}
@@ -33,7 +33,7 @@ namespace dbgutils {
 		//					MANIPULATORS
 		//
 
-		void DragCaret(Direction dir, size_t amount, size_t end);
+		void drag_caret(Direction dir, size_t amount, size_t end);
 
 	private:
 		Range<size_t>	m_range;

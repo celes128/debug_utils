@@ -250,6 +250,13 @@ namespace dbgutils {
 			else {
 				return simulate_caret_movement_ctrl_left();
 			}
+		} else if (dir == Direction::RIGHT) {
+			if (ctrl == CTRL_RELEASED) {
+				return simulate_caret_movement_right(amount);
+			}
+			else {
+				return simulate_caret_movement_ctrl_right();
+			}
 		}
 
 		assert(false && "Direction not yet implemented.");
@@ -312,32 +319,32 @@ namespace dbgutils {
 		return Movement{ m_caret, 0 };
 	}
 
-	void EditBox::caret_move_left(size_t n)
-	{
-		for(; m_caret >= 1 && n > 0; n--) {
-			--m_caret;
-		}
-	}
-
 	bool EditBox::handle_key_right(const ModKeyState &mod)
 	{
-		if (mod.ctrl) {
-			return handle_key_ctrl_right();
-		}
+		auto mvt = simulate_caret_movement(
+			Direction::RIGHT,
+			1,
+			mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED
+		);
 
-		if (m_caret >= m_str.length()) {
-			return false;
-		}
+		m_caret = mvt.after;
 
-		++m_caret;
-		return true;
+		return !mvt.null();
 	}
 
-	bool EditBox::handle_key_ctrl_right()
+	EditBox::Movement EditBox::simulate_caret_movement_right(size_t amount)
 	{
-		// Save the caret in order to check, before returning, if it moved.
-		auto prev = m_caret;
+		auto maxMove = m_str.length() - m_caret;
+		auto displacement = std::min(amount, maxMove);
 
+		return Movement{
+			m_caret,				// before
+			m_caret + displacement	// after
+		};
+	}
+
+	EditBox::Movement EditBox::simulate_caret_movement_ctrl_right()
+	{
 		// Determine the word and space ranges in the input string.
 		auto ranges = ComputeStringRanges(m_str);
 
@@ -355,13 +362,17 @@ namespace dbgutils {
 		size_t j;
 		auto nextWordRangeFound = FindNextRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
 		if (nextWordRangeFound) {
-			m_caret = ranges[j].begin;
-			return prev != m_caret;
+			return Movement{
+				m_caret,
+				ranges[j].begin
+			};
 		}
 
-		// Else go to the end.
-		m_caret = m_str.length();
-		return prev != m_caret;
+		// Else go to the end of the string.
+		return Movement{
+				m_caret,
+				m_str.length()
+		};
 	}
 
 	bool EditBox::handle_key_backspace(const ModKeyState &mod)

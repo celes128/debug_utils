@@ -100,21 +100,11 @@ namespace dbgutils {
 		bool handle_key(Key key, const ModKeyState &mod = ModKeyState());
 
 	private:
-		// selection_range returns the selection range defined by the caret and the mark.
-		// The range can be empty.
-		// PRECONDITIONS
-		//	m_selecting == true
-		//Range<size_t> selection_range() const;
-
 		bool handle_key_left(const ModKeyState &mod);
-		bool handle_key_ctrl_left();
 		bool handle_key_right(const ModKeyState &mod);
-		bool handle_key_ctrl_right();
 		bool handle_key_backspace(const ModKeyState &mod);
 		bool handle_key_home(const ModKeyState &mod);
 		bool handle_key_end(const ModKeyState &mod);
-
-		void caret_move_left(size_t n);
 
 		struct Movement {
 			// Position (in the string) before the movement.
@@ -143,7 +133,7 @@ namespace dbgutils {
 			CTRL_PRESSED = 1
 		};
 		
-		// REMAKRS
+		// REMARKS
 		//	If the ctrl key is pressed, the amount parameter is ignored.
 		Movement simulate_caret_movement(Direction dir, size_t amount, CTRL_KEY_STATE ctrl);
 
@@ -151,18 +141,15 @@ namespace dbgutils {
 		// Simulate a left movement of at most amount posisitions in the string.
 		Movement simulate_caret_movement_left(size_t amount);
 
+		Movement simulate_caret_movement_ctrl_right();
+		// Simulate a right movement of at most amount posisitions in the string.
+		Movement simulate_caret_movement_right(size_t amount);
+
 	private:
 		// The content of the edit box.
 		std::wstring	m_str;
 		
 		// Position of the caret inside the string.
 		size_t			m_caret{ 0 };
-
-		//// NOT IMPLEMENTED
-		//// Selection state
-		//// When the user holds shift and moves the caret, it creates a selection region
-		//// delimited by the caret and the mark.
-		//bool			m_selecting{ false };
-		//size_t		m_mark{ 0 };
 	};
 }

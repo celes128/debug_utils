@@ -25,7 +25,8 @@ namespace dbgutils {
 		
 		auto get_range() const { return m_range; }
 		auto get_caret_side() const { return m_caretSide; }
-		
+		bool empty() const { return m_range.empty(); }
+
 		// Get the end points of the range.
 		size_t get_caret() const;
 		size_t get_other_end() const;

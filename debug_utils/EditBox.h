@@ -138,6 +138,11 @@ namespace dbgutils {
 			CTRL_RELEASED = 0,
 			CTRL_PRESSED = 1
 		};
+
+		CTRL_KEY_STATE ctrl_key_state(const ModKeyState &mod) const
+		{
+			return mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED;
+		}
 		
 		// REMARKS
 		//	If the ctrl key is pressed, the amount parameter is ignored.
@@ -150,6 +155,8 @@ namespace dbgutils {
 		Movement simulate_caret_movement_ctrl_right();
 		// Simulate a right movement of at most amount posisitions in the string.
 		Movement simulate_caret_movement_right(size_t amount);
+
+		void delete_substring(const Range<size_t> &range);
 
 	private:
 		// The content of the edit box.

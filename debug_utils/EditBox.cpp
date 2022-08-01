@@ -239,11 +239,7 @@ namespace dbgutils {
 	{
 		assert(dir == Direction::LEFT || dir == Direction::RIGHT);
 
-		auto mvt = simulate_caret_movement(
-			dir,
-			1,
-			mod.ctrl ? CTRL_PRESSED : CTRL_RELEASED
-		);
+		auto mvt = simulate_caret_movement(dir, 1, ctrl_key_state(mod));
 
 		return set_caret(mvt.after);
 	}
@@ -383,13 +379,23 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_backspace(const ModKeyState &mod)
 	{
-		if (m_caret <= 0) {
-			return false;
+		if (m_selection.empty()) {
+			auto mvt = simulate_caret_movement(Direction::LEFT, 1, ctrl_key_state(mod));
+			
+			delete_substring(mvt.get_range());
+			
+			return set_caret(mvt.get_range().begin());
 		}
 
-		--m_caret;
-		m_str.erase(m_caret, 1);
-		return true;
+		return false;
+	}
+
+	void EditBox::delete_substring(const Range<size_t> &range)
+	{
+		m_str.erase(
+			m_str.begin() + range.begin(),
+			m_str.begin() + range.end()
+		);
 	}
 
 	bool EditBox::handle_key_home(const ModKeyState &mod)

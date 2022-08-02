@@ -277,11 +277,9 @@ namespace dbgutils {
 	{
 		auto maxMove = m_caret - 0;
 		auto displacement = std::min(amount, maxMove);
-		
-		return Movement{
-			m_caret,				// before
-			m_caret - displacement	// after
-		};
+		auto destination = m_caret - displacement;
+
+		return MovementFromCaretTo(destination);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_ctrl_left()
@@ -289,7 +287,7 @@ namespace dbgutils {
 		// Determine the word and space ranges in the input string.
 		auto ranges = ComputeStringRanges(m_str);
 
-		// Look for the range that contains the caret.
+		// Look if a range contains the caret.
 		size_t i = 0;
 		auto caretInARange = FindRangeContainingIndex(IN m_caret, IN ranges, OUT &i);
 		if (!caretInARange) {
@@ -304,29 +302,29 @@ namespace dbgutils {
 		if (caretInARange) {
 			const auto &caretRange = ranges[i];
 			if (caretRange.type == STRING_RANGE_TYPE_WORD && m_caret != caretRange.begin) {
-				return Movement{ m_caret, caretRange.begin };
+				return MovementFromCaretTo(caretRange.begin);
 			}
 		}
 
-		// From now on, we try to find a range to move the caret to.
+		// From here, we try to find a range on the left to move the caret to.
 		// j is the index of this range.
 		size_t j;
 
-		// Then we look for a word range on the left.
+		// We first look for a word range.
 		auto prevWordRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
 		if (prevWordRangeFound) {
-			return Movement{ m_caret, ranges[j].begin };
+			return MovementFromCaretTo(ranges[j].begin);
 		}
 
-		// Then we look for a space range on the left.
+		// We then we look for a space range.
 		auto prevSpaceRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_SPACE, i, ranges, &j);
-		if (prevSpaceRangeFound) {			
-			return Movement{ m_caret, ranges[j].begin };
+		if (prevSpaceRangeFound) {
+			return MovementFromCaretTo(ranges[j].begin);
 		}
 
-		// If no previous range could be found then it means that
+		// If control flow reaches this section, it means that
 		// the string is empty so we put the caret at the beginning of it.
-		return Movement{ m_caret, 0 };
+		return MovementFromCaretTo(beginning_of_string());
 	}
 
 	bool EditBox::handle_key_right(const ModKeyState &mod)
@@ -336,13 +334,12 @@ namespace dbgutils {
 
 	EditBox::Movement EditBox::simulate_caret_movement_right(size_t amount)
 	{
-		auto maxMove = m_str.length() - m_caret;
+		auto maxMove = end_of_string() - m_caret;
 		auto displacement = std::min(amount, maxMove);
 
-		return Movement{
-			m_caret,				// before
-			m_caret + displacement	// after
-		};
+		auto destination = m_caret + displacement;
+
+		return MovementFromCaretTo(destination);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_ctrl_right()
@@ -350,7 +347,7 @@ namespace dbgutils {
 		// Determine the word and space ranges in the input string.
 		auto ranges = ComputeStringRanges(m_str);
 
-		// Look for the range that contains the caret.
+		// Look if a range contains the caret.
 		size_t i = 0;
 		auto caretInARange = FindRangeContainingIndex(IN m_caret, IN ranges, OUT &i);
 		if (!caretInARange) {
@@ -364,17 +361,18 @@ namespace dbgutils {
 		size_t j;
 		auto nextWordRangeFound = FindNextRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
 		if (nextWordRangeFound) {
-			return Movement{
-				m_caret,
-				ranges[j].begin
-			};
+			return MovementFromCaretTo(ranges[j].begin);
 		}
 
 		// Else go to the end of the string.
-		return Movement{
-				m_caret,
-				m_str.length()
-		};
+		return MovementFromCaretTo(end_of_string());
+	}
+
+	EditBox::Movement EditBox::MovementFromCaretTo(size_t destination)
+	{
+		assert(destination <= end_of_string());
+
+		return Movement{ m_caret, destination };
 	}
 
 	bool EditBox::handle_key_backspace(const ModKeyState &mod)
@@ -405,7 +403,7 @@ namespace dbgutils {
 
 	bool EditBox::handle_key_end(const ModKeyState &mod)
 	{
-		return set_caret(m_str.length());
+		return set_caret(end_of_string());
 	}
 
 	bool EditBox::set_caret(size_t position)

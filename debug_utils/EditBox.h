@@ -148,6 +148,10 @@ namespace dbgutils {
 		//	If the ctrl key is pressed, the amount parameter is ignored.
 		Movement simulate_caret_movement(Direction dir, size_t amount, CTRL_KEY_STATE ctrl);
 
+		// REMARKS
+		//	This function simulates the Ctrl-Left key press behaviour that is found in most text editors.
+		//	The behaviour is a bit annoying to explain but the most general case is that the caret moves
+		//	to the first character of the word on its left.
 		Movement simulate_caret_movement_ctrl_left();
 		// Simulate a left movement of at most amount posisitions in the string.
 		Movement simulate_caret_movement_left(size_t amount);
@@ -156,7 +160,14 @@ namespace dbgutils {
 		// Simulate a right movement of at most amount posisitions in the string.
 		Movement simulate_caret_movement_right(size_t amount);
 
+		// MovementFromCaretTo returns a Movement object that starts at the caret
+		// and goes to the specified destination.
+		Movement MovementFromCaretTo(size_t destination);
+
 		void delete_substring(const Range<size_t> &range);
+
+		size_t beginning_of_string() const { return 0; }
+		size_t end_of_string() const { return m_str.length(); }
 
 	private:
 		// The content of the edit box.

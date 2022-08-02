@@ -50,6 +50,38 @@ namespace dbgutils {
 		}
 	}
 
+	bool StringSelectionRange::collapse(Direction dir)
+	{
+		auto wasNotEmpty = !empty();
+
+		// We need to make a null range.
+		// We have to determine the position of the range from the direction.
+		auto pos = get_end_point(dir);
+		m_range = Range<size_t>(pos, pos);
+
+		m_caretSide = dir;
+
+		return wasNotEmpty;
+	}
+
+	size_t StringSelectionRange::get_end_point(Direction dir) const
+	{
+		auto pos = 0;
+
+		switch (dir) {
+		case Direction::LEFT:
+			return get_left();
+			break;
+		case Direction::RIGHT:
+			return get_right();
+			break;
+		default:
+			assert(false && "Direction not handled.");
+			return 0;
+			break;
+		}
+	}
+
 	size_t StringSelectionRange::get_caret() const
 	{
 		if (m_caretSide == LEFT) {

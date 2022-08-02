@@ -279,7 +279,7 @@ namespace dbgutils {
 		auto displacement = std::min(amount, maxMove);
 		auto destination = m_caret - displacement;
 
-		return MovementFromCaretTo(destination);
+		return movement_from_caret_to(destination);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_ctrl_left()
@@ -302,7 +302,7 @@ namespace dbgutils {
 		if (caretInARange) {
 			const auto &caretRange = ranges[i];
 			if (caretRange.type == STRING_RANGE_TYPE_WORD && m_caret != caretRange.begin) {
-				return MovementFromCaretTo(caretRange.begin);
+				return movement_from_caret_to(caretRange.begin);
 			}
 		}
 
@@ -313,18 +313,18 @@ namespace dbgutils {
 		// We first look for a word range.
 		auto prevWordRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
 		if (prevWordRangeFound) {
-			return MovementFromCaretTo(ranges[j].begin);
+			return movement_from_caret_to(ranges[j].begin);
 		}
 
 		// We then we look for a space range.
 		auto prevSpaceRangeFound = FindPreviousRangeType(STRING_RANGE_TYPE_SPACE, i, ranges, &j);
 		if (prevSpaceRangeFound) {
-			return MovementFromCaretTo(ranges[j].begin);
+			return movement_from_caret_to(ranges[j].begin);
 		}
 
 		// If control flow reaches this section, it means that
 		// the string is empty so we put the caret at the beginning of it.
-		return MovementFromCaretTo(beginning_of_string());
+		return movement_from_caret_to(beginning_of_string());
 	}
 
 	bool EditBox::handle_key_right(const ModKeyState &mod)
@@ -339,7 +339,7 @@ namespace dbgutils {
 
 		auto destination = m_caret + displacement;
 
-		return MovementFromCaretTo(destination);
+		return movement_from_caret_to(destination);
 	}
 
 	EditBox::Movement EditBox::simulate_caret_movement_ctrl_right()
@@ -361,14 +361,14 @@ namespace dbgutils {
 		size_t j;
 		auto nextWordRangeFound = FindNextRangeType(STRING_RANGE_TYPE_WORD, i, ranges, &j);
 		if (nextWordRangeFound) {
-			return MovementFromCaretTo(ranges[j].begin);
+			return movement_from_caret_to(ranges[j].begin);
 		}
 
 		// Else go to the end of the string.
-		return MovementFromCaretTo(end_of_string());
+		return movement_from_caret_to(end_of_string());
 	}
 
-	EditBox::Movement EditBox::MovementFromCaretTo(size_t destination)
+	EditBox::Movement EditBox::movement_from_caret_to(size_t destination)
 	{
 		assert(destination <= end_of_string());
 
@@ -380,7 +380,7 @@ namespace dbgutils {
 		if (m_selection.empty()) {
 			auto mvt = simulate_caret_movement(Direction::LEFT, 1, ctrl_key_state(mod));
 			
-			delete_substring(mvt.get_range());
+			delete_string_range(mvt.get_range());
 			
 			return set_caret(mvt.get_range().begin());
 		}
@@ -388,7 +388,7 @@ namespace dbgutils {
 		return false;
 	}
 
-	void EditBox::delete_substring(const Range<size_t> &range)
+	void EditBox::delete_string_range(const Range<size_t> &range)
 	{
 		m_str.erase(
 			m_str.begin() + range.begin(),

@@ -162,9 +162,9 @@ namespace dbgutils {
 
 		// MovementFromCaretTo returns a Movement object that starts at the caret
 		// and goes to the specified destination.
-		Movement MovementFromCaretTo(size_t destination);
+		Movement movement_from_caret_to(size_t destination);
 
-		void delete_substring(const Range<size_t> &range);
+		void delete_string_range(const Range<size_t> &range);
 
 		size_t beginning_of_string() const { return 0; }
 		size_t end_of_string() const { return m_str.length(); }

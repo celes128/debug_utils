@@ -74,3 +74,25 @@ TEST(StrSelRange_DragCaret, DragCaret5)
 		StrSelRange(Dir::RIGHT, 5, 10)
 	);
 }
+
+TEST(StrSelRange, Collapse)
+{
+	using Dir = dbgutils::Direction;
+	using StrSelRange = dbgutils::StringSelectionRange;
+
+	// First test - Collapsed towards the left.
+	{
+		StrSelRange got(Dir::LEFT, 2, 5);
+		got.collapse(Dir::LEFT);
+		auto expected = StrSelRange(Dir::LEFT, 2, 2);
+		EXPECT_EQ(got, expected);
+	}
+
+	// Second test - Collapsed towards the right.
+	{
+		StrSelRange got(Dir::LEFT, 2, 5);
+		got.collapse(Dir::RIGHT);
+		auto expected = StrSelRange(Dir::RIGHT, 5, 5);
+		EXPECT_EQ(got, expected);
+	}
+}
